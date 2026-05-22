@@ -1,0 +1,25 @@
+:root {
+  --pm-color-primary: #4f46e5;
+  --pm-color-primary-strong: #4338ca;
+  --pm-color-success: #059669;
+  --pm-color-warning: #d97706;
+  --pm-color-danger: #dc2626;
+  --pm-color-surface: #ffffff;
+  --pm-color-canvas: #f8fafc;
+  --pm-color-panel: #f1f5f9;
+  --pm-color-text: #0f172a;
+  --pm-color-muted: #64748b;
+  --pm-radius-sm: 8px;
+  --pm-radius-md: 12px;
+  --pm-radius-lg: 16px;
+  --pm-radius-xl: 20px;
+  --pm-shadow-soft: 0 18px 55px -32px rgba(15, 23, 42, 0.45);
+  --pm-shadow-panel: 0 14px 40px -28px rgba(15, 23, 42, 0.5);
+  --pm-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pm-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.pm-focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.14);
+}

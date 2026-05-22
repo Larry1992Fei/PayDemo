@@ -1,0 +1,15 @@
+{
+  "name": "payermax-payment-demo",
+  "version": "2.0.0",
+  "description": "PayerMax static payment demo",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "install:all": "cd frontend && npm install"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

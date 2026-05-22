@@ -1,0 +1,33 @@
+@import './styles/design-tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+    font-family: var(--pm-font-sans);
+}
+
+/* JSON syntax highlighting */
+.jk {
+    color: #7DD3FC;
+}
+
+.js {
+    color: #86EFAC;
+}
+
+.jn {
+    color: #FCD34D;
+}
+
+.jc {
+    color: #475569;
+    font-style: italic;
+}
+
+.jv {
+    color: #F9A8D4;
+}
