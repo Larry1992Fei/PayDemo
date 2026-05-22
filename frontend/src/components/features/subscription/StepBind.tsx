@@ -283,11 +283,12 @@ export const SelfHostedApiCashier: React.FC<{
 
 const BrowserShell: React.FC<{ url: string; action?: React.ReactNode; onCallback?: () => void }> = ({ url, action, onCallback }) => {
   const callbackHandledRef = React.useRef(false);
+  const callbackPath = `${window.location.origin}${import.meta.env.BASE_URL}callback`;
 
   const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
     try {
       const iframeUrl = event.currentTarget.contentWindow?.location.href || '';
-      if (!callbackHandledRef.current && iframeUrl.startsWith(`${window.location.origin}/callback`)) {
+      if (!callbackHandledRef.current && (iframeUrl.startsWith(callbackPath) || iframeUrl.startsWith(`${window.location.origin}/callback`))) {
         callbackHandledRef.current = true;
         onCallback?.();
       }

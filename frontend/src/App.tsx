@@ -23,7 +23,8 @@ function AppContent() {
       const tradeToken = urlParams.get('tradeToken');
       const orderNo = urlParams.get('orderNo');
       const redirectUrl = window.location.href;
-      const isCallbackPath = window.location.pathname === '/callback';
+      const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const isCallbackPath = window.location.pathname === `${basePath}/callback` || window.location.pathname === '/callback';
       const isSuccess = ['SUCCESS', 'success'].includes(payStatus || '') || ['SUCCESS', 'success'].includes(status || '');
 
       const callbackData = {
@@ -41,7 +42,7 @@ function AppContent() {
             queryError: error instanceof Error ? error.message : 'subscriptionQuery failed',
           });
         });
-        window.history.replaceState({}, document.title, '/');
+        window.history.replaceState({}, document.title, import.meta.env.BASE_URL);
         return;
       }
 
@@ -53,7 +54,7 @@ function AppContent() {
           data: callbackData,
         });
         handleStepClick(successStep);
-        window.history.replaceState({}, document.title, '/');
+        window.history.replaceState({}, document.title, import.meta.env.BASE_URL);
       }
     };
 
