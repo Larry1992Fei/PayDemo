@@ -12,6 +12,7 @@ export const StandardProductPreview: React.FC = () => {
   const { amount, currency, toNextStep, integrationMode, cashierMode } = useProduct();
   const [showApiCashier, setShowApiCashier] = React.useState(false);
   const [showSpecificCashier, setShowSpecificCashier] = React.useState(false);
+  const productImageUrl = `${import.meta.env.BASE_URL}product.png`;
 
   React.useEffect(() => {
     if (integrationMode !== 'api') {
@@ -35,7 +36,7 @@ export const StandardProductPreview: React.FC = () => {
       {/* 1. 商品主图区 */}
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-100">
         <img 
-          src="/product.png" 
+          src={productImageUrl} 
           alt="Premium Gadget" 
           className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-700"
         />

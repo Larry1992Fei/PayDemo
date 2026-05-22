@@ -199,7 +199,7 @@ const ApiModeCashier: React.FC<{ amount: string; currency: string }> = ({ amount
 };
 
 // ─── 收银台模式：指定支付方式（与 API 模式同一设计语言） ────────────────────
-const CashierModeCashier: React.FC<{ amount: string }> = ({ amount }) => {
+const CashierModeCashier: React.FC<{ amount: string; productImageUrl: string }> = ({ amount, productImageUrl }) => {
   const { cashierPaymentMethod, setCashierPaymentMethod, currency, toNextStep } = useProduct();
 
   const navigate = (id: string) => {
@@ -235,7 +235,7 @@ const CashierModeCashier: React.FC<{ amount: string }> = ({ amount }) => {
       {/* ── 商品摘要条（横向紧凑，比 API 模式简单，留更多空间给支付方式） ── */}
       <div className="bg-white border-b border-slate-100 px-5 py-3 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
-          <img src="/product.png" alt="Product" className="w-full h-full object-cover" />
+          <img src={productImageUrl} alt="Product" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[12px] font-bold text-slate-800 truncate">PayerMax Smart Watch Pro</p>
@@ -303,10 +303,11 @@ const CashierModeCashier: React.FC<{ amount: string }> = ({ amount }) => {
 // ─── 路由组件 ──────────────────────────────────────────────────────────────────
 export const StepSpecificCashier: React.FC = () => {
   const { integrationMode, amount, currency } = useProduct();
+  const productImageUrl = `${import.meta.env.BASE_URL}product.png`;
 
   if (integrationMode === 'api') {
     return <ApiModeCashier amount={amount} currency={currency} />;
   }
 
-  return <CashierModeCashier amount={amount} />;
+  return <CashierModeCashier amount={amount} productImageUrl={productImageUrl} />;
 };

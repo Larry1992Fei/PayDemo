@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
  */
 export const DramaProductPreview: React.FC = () => {
   const { subscriptionType, setSubscriptionType, integrationMode, paymentMethod, formParams, updateFormParam, goNext } = useSubscription();
+  const dramaCoverUrl = `${import.meta.env.BASE_URL}drama_cover.png`;
 
   const isTrial = subscriptionType === 'trial';
   const isDiscount = subscriptionType === 'discount';
@@ -45,7 +46,7 @@ export const DramaProductPreview: React.FC = () => {
       {/* ── 1. 海报背景 ── */}
       <div className="relative h-[30%] w-full shrink-0">
         <img 
-          src="/drama_cover.png" 
+          src={dramaCoverUrl} 
           alt="The Ultimate Revenge" 
           className="w-full h-full object-cover opacity-60"
         />
