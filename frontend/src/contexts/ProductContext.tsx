@@ -6,6 +6,7 @@ import { getStandardSteps } from '@/config/standardSteps';
 import { buildStandardOrderRequest } from '@/config/standardRequestBuilder';
 import { postPayerMaxDemoApi } from '@/services/payermaxClient';
 import { showUiError } from '@/lib/uiFeedback';
+import { createDemoUserId } from '@/lib/demoIds';
 
 // 鈹€鈹€ 绫诲瀷瀹氫箟 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 export type ProductMode = 'STANDARD' | 'SUBSCRIPTION' | 'PAYMENT_LINK' | 'DISBURSEMENT';
@@ -172,7 +173,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const currency = "USD";
   const country = "ID";
   const subject = "diamond 700";
-  const [userId] = useState(`USER_${Date.now()}`); 
+  const [userId] = useState(() => createDemoUserId());
 
   // 鈹€鈹€ 鎸佷箙鍖栧悓姝?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   useEffect(() => {
@@ -558,7 +559,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currency,
         country,
         subject,
-        userId: "USER_" + Date.now(),
+        userId: createDemoUserId(),
         integrationMode,
         cashierMode,
         paymentMethod: effectivePaymentMethod,

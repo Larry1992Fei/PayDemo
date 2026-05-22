@@ -1,5 +1,6 @@
 import { DEMO_FRONT_CALLBACK_URL, DEMO_MIT_MANAGEMENT_URL, DEMO_NOTIFY_URL } from '@/config/payermaxDemoUrls';
 import { buildFirstPeriodStartDate, buildSubscriptionPlan, normalizeApmSubscriptionParams, normalizeFullCashierSubscriptionParams } from '@/types/subscription';
+import { createDemoUserId } from '@/lib/demoIds';
 
 const APP_ID = '67eff2f3b29a4ecf9576321185dbf658';
 const MERCHANT_NO = 'SDP01010114048893';
@@ -367,7 +368,7 @@ function buildOrderAndPayRequest(req: Record<string, any>) {
     currency: finalCurrency,
     ...(!omitCountry ? { country: req.country || 'ID' } : {}),
     subject: req.subject || (subscriptionMode ? '订阅激活支付' : 'Demo Payment'),
-    userId: req.userId || `USER_${Date.now()}`,
+    userId: req.userId || createDemoUserId(),
     reference: req.reference || 'CustomRef',
     frontCallbackUrl: FRONT_CALLBACK_URL,
     notifyUrl: NOTIFY_URL,
@@ -518,7 +519,7 @@ export async function postPayerMaxDemoApi(path: DemoApiPath, body: Record<string
         country: body.country,
         currency: body.currency,
         totalAmount: body.amount,
-        userId: body.userId || `USER_${Date.now()}`,
+        userId: body.userId || createDemoUserId(),
         componentList: body.componentList || ['CARD', 'APPLEPAY', 'GOOGLEPAY'],
         ...(body.mitType ? { mitType: body.mitType } : {}),
         ...(body.targetOrg ? { targetOrg: body.targetOrg } : {}),
@@ -542,7 +543,7 @@ export async function postPayerMaxDemoApi(path: DemoApiPath, body: Record<string
         description: body.description || 'PayerMax demo payment link',
         linkDescription: body.linkDescription || 'Demo link created by API',
         userInfo: {
-          userId: body.userInfo?.userId || `USER_${Date.now()}`,
+          userId: body.userInfo?.userId || createDemoUserId(),
           username: body.userInfo?.username || 'Demo Buyer',
         },
         goodsDetails: body.goodsDetails?.length ? body.goodsDetails : [

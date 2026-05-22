@@ -4,6 +4,8 @@
  */
 
 // ─── 业务模式（订阅内三种子线路）───────────────────────────────────────────
+import { createDemoUserId } from '@/lib/demoIds';
+
 export type SubMode = 'payermax' | 'merchant' | 'nonperiodic';
 
 export const SUB_MODE_CONFIG: Record<SubMode, { name: string; desc: string }> = {
@@ -90,7 +92,7 @@ export const DEFAULT_FORM_PARAMS: SubscriptionFormParams = {
   trialPeriodCountCombo: '1', trialPeriodAmountCombo: '200',
   description: 'PMMAX周期首期扣款。',
   bindType: 'zero', merchantAmount: '2000', merchantCurrency: 'KRW',
-  merchantSubject: '代扣标题', merchantUserId: `USER_${Date.now()}`,
+  merchantSubject: '代扣标题', merchantUserId: createDemoUserId(),
   npAmount: '100', npCurrency: 'KRW',
 };
 

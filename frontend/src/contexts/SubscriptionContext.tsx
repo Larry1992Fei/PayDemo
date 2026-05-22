@@ -6,6 +6,7 @@ import { calculateActivationAmount, DEFAULT_FORM_PARAMS, getMandateAmounts, getS
 import { getStepsForSubMode } from '@/config/subscriptionSteps';
 import { postPayerMaxDemoApi } from '@/services/payermaxClient';
 import { DEMO_MIT_MANAGEMENT_URL } from '@/config/payermaxDemoUrls';
+import { createDemoUserId } from '@/lib/demoIds';
 import { showUiWarning } from '@/lib/uiFeedback';
 
 // 鈹€鈹€鈹€ Context 鎺ュ彛 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
@@ -173,11 +174,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const stored = JSON.parse(sessionStorage.getItem('subscription.formParams') || 'null');
       const nextParams = stored ? { ...DEFAULT_FORM_PARAMS, ...stored } : { ...DEFAULT_FORM_PARAMS };
       if (!nextParams.merchantUserId || nextParams.merchantUserId === 'test1111111') {
-        nextParams.merchantUserId = `USER_${Date.now()}`;
+        nextParams.merchantUserId = createDemoUserId();
       }
       return nextParams;
     } catch {
-      return { ...DEFAULT_FORM_PARAMS, merchantUserId: `USER_${Date.now()}` };
+      return { ...DEFAULT_FORM_PARAMS, merchantUserId: createDemoUserId() };
     }
   });
   const [currentStepIndex, setCurrentStepIndex] = useState(() => Number(sessionStorage.getItem('subscription.currentStepIndex') || 0));
@@ -218,7 +219,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [mandateBindOrderNo, setMandateBindOrderNo] = useState<string | null>(sessionStorage.getItem('subscription.mandateBindOrderNo'));
   const [mandateTargetOrg, setMandateTargetOrg] = useState<string | null>(sessionStorage.getItem('subscription.mandateTargetOrg'));
   const [mandatePaymentMethod, setMandatePaymentMethod] = useState<string | null>(sessionStorage.getItem('subscription.mandatePaymentMethod'));
-  const [subscriptionUserId, setSubscriptionUserId] = useState(sessionStorage.getItem('subscription.subscriptionUserId') || `USER_${Date.now()}`);
+  const [subscriptionUserId, setSubscriptionUserId] = useState(sessionStorage.getItem('subscription.subscriptionUserId') || createDemoUserId());
 
   const flash = useCallback(() => setTriggerFlash(n => n + 1), []);
 
@@ -306,7 +307,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setMandateBindOrderNo(null);
     setMandateTargetOrg(null);
     setMandatePaymentMethod(null);
-    setSubscriptionUserId(`USER_${Date.now()}`);
+    setSubscriptionUserId(createDemoUserId());
     [
       'subscription.subscriptionNo',
       'subscription.activationRedirectUrl',
@@ -468,7 +469,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const reset = useCallback(() => {
     setCurrentStepIndex(0);
-    setFormParams({ ...DEFAULT_FORM_PARAMS, merchantUserId: `USER_${Date.now()}` });
+    setFormParams({ ...DEFAULT_FORM_PARAMS, merchantUserId: createDemoUserId() });
     setSubscriptionNo(null);
     setActivationRedirectUrl(null);
     setLastApiResponse(null);
@@ -485,7 +486,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setMandateBindOrderNo(null);
     setMandateTargetOrg(null);
     setMandatePaymentMethod(null);
-    setSubscriptionUserId(`USER_${Date.now()}`);
+    setSubscriptionUserId(createDemoUserId());
     [
       'subscription.subscriptionNo',
       'subscription.activationRedirectUrl',
