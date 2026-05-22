@@ -173,7 +173,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const currency = "USD";
   const country = "ID";
   const subject = "diamond 700";
-  const [userId] = useState(() => createDemoUserId());
+  const [userId, setUserId] = useState(() => sessionStorage.getItem('standard.userId') || createDemoUserId());
 
   // 鈹€鈹€ 鎸佷箙鍖栧悓姝?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   useEffect(() => {
@@ -189,7 +189,8 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (paymentLinkData) sessionStorage.setItem('paymentLinkData', JSON.stringify(paymentLinkData));
     else sessionStorage.removeItem('paymentLinkData');
     sessionStorage.setItem('standard.stepApiExchanges', JSON.stringify(stepApiExchanges));
-  }, [productMode, integrationMode, cashierMode, currentStep, paymentMethod, redirectUrl, lastApiResponse, stepApiExchanges, paymentLinkData]);
+    sessionStorage.setItem('standard.userId', userId);
+  }, [productMode, integrationMode, cashierMode, currentStep, paymentMethod, redirectUrl, lastApiResponse, stepApiExchanges, paymentLinkData, userId]);
 
   // 鈹€鈹€ 鎬ц兘浼樺寲锛氱粍浠舵ā寮忓悗鍙伴鍔犺浇 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   useEffect(() => {
@@ -232,6 +233,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSessionError(null);
     setPaymentToken(null);
     setPaymentLinkData(null);
+    setUserId(createDemoUserId());
     setTriggerFlash(prev => prev + 1);
   };
 
@@ -559,7 +561,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         currency,
         country,
         subject,
-        userId: createDemoUserId(),
+        userId,
         integrationMode,
         cashierMode,
         paymentMethod: effectivePaymentMethod,
