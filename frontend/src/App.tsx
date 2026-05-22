@@ -4,6 +4,7 @@ import { SubscriptionProvider, useSubscription } from '@/contexts/SubscriptionCo
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Playzone } from '@/components/layout/Playzone';
+import { isCallbackUrl, parseCallbackData } from '@/lib/callbackReturn';
 
 function AppContent() {
   const {
@@ -22,17 +23,9 @@ function AppContent() {
       const outTradeNo = urlParams.get('outTradeNo');
       const tradeToken = urlParams.get('tradeToken');
       const orderNo = urlParams.get('orderNo');
-      const redirectUrl = window.location.href;
-      const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-      const isCallbackPath = window.location.pathname === `${basePath}/callback` || window.location.pathname === '/callback';
+      const isCallbackPath = isCallbackUrl(window.location.href);
       const isSuccess = ['SUCCESS', 'success'].includes(payStatus || '') || ['SUCCESS', 'success'].includes(status || '');
-
-      const callbackData = {
-        outTradeNo: outTradeNo || orderNo || `ORDER_${Date.now()}`,
-        tradeToken,
-        payStatus: status || payStatus || 'SUCCESS',
-        redirectUrl,
-      };
+      const callbackData = parseCallbackData(window.location.href);
 
       if (isCallbackPath && productMode === 'SUBSCRIPTION') {
         void completeActivationWithQuery(callbackData).catch((error) => {

@@ -1,8 +1,10 @@
 import React from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { getMandateAmounts, PAYMENT_METHOD_CONFIG } from '@/types/subscription';
-import { AlertCircle, ArrowRight, CheckCircle2, CreditCard, Loader2, Server } from 'lucide-react';
+import { AlertCircle, ArrowRight, CreditCard, Loader2, Server } from 'lucide-react';
 import { OrderResultPanel } from '@/components/shared/OrderResultPanel';
+import { isCallbackUrl } from '@/lib/callbackReturn';
+import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 export const StepMandateOrder: React.FC = () => {
   const {
@@ -33,7 +35,6 @@ export const StepMandateOrder: React.FC = () => {
   const canSubmit = !isApiCalling && (!isComponent || Boolean(componentPaymentToken && componentSessionData?.sessionKey));
   const callbackHandledRef = React.useRef(false);
   const [mockReturnUrl, setMockReturnUrl] = React.useState<string | null>(null);
-  const callbackPath = `${window.location.origin}${import.meta.env.BASE_URL}callback`;
   const shouldDisplayRedirectUrl = Boolean(
     activationRedirectUrl
       && (
@@ -42,6 +43,11 @@ export const StepMandateOrder: React.FC = () => {
         || (subMode === 'nonperiodic' && integrationMode === 'api' && currentStep.id === 'np-order')
       )
   );
+
+  React.useEffect(() => {
+    callbackHandledRef.current = false;
+    setMockReturnUrl(null);
+  }, [activationRedirectUrl]);
 
   const handleOrder = async () => {
     await bindMandatePaymentMethod(paymentMethod, currentStep.id);
@@ -59,7 +65,7 @@ export const StepMandateOrder: React.FC = () => {
   const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
     try {
       const iframeUrl = event.currentTarget.contentWindow?.location.href || '';
-      if (!callbackHandledRef.current && (iframeUrl.startsWith(callbackPath) || iframeUrl.startsWith(`${window.location.origin}/callback`))) {
+      if (!callbackHandledRef.current && isCallbackUrl(iframeUrl)) {
         callbackHandledRef.current = true;
         setMockReturnUrl(iframeUrl);
       }
@@ -78,6 +84,7 @@ export const StepMandateOrder: React.FC = () => {
               status={status || code || 'SUCCESS'}
               orderNo={lastApiResponse?.data?.outTradeNo || lastApiResponse?.localOrderNo || 'ORDER_RETURNED'}
               methodLabel={methodLabel}
+              businessLabel="MANDATE_API_BIND"
             />
           ) : (
             <iframe
@@ -98,7 +105,10 @@ export const StepMandateOrder: React.FC = () => {
             className="w-full h-11 rounded-2xl bg-blue-600 text-white font-black flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
           >
             {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+            <span>{mockReturnUrl ? 'Continue to binding result' : 'Authorization completed, query result'}</span>
+            <span className="hidden">
             授权完成后，查询绑定结果
+            </span>
           </button>
         </div>
       </div>
@@ -179,23 +189,6 @@ const BrowserBar: React.FC<{ url: string }> = ({ url }) => (
     <div className="flex-1 bg-white h-6 rounded-md border border-slate-100 flex items-center px-3 text-[9px] text-slate-400 truncate">
       <span className="text-emerald-500 mr-1 font-bold">https://</span>
       {url.split('//')[1] || url}
-    </div>
-  </div>
-);
-
-const MockReturnPage: React.FC<{ status: string; orderNo: string; methodLabel: string }> = ({ status, orderNo, methodLabel }) => (
-  <div className="h-full bg-white flex flex-col items-center justify-center px-6 text-center">
-    <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-5">
-      <CheckCircle2 className="w-8 h-8" />
-    </div>
-    <h3 className="text-lg font-black text-slate-900">Returned to merchant</h3>
-    <p className="mt-2 text-xs font-semibold text-slate-500 leading-relaxed">
-      The browser has reached frontCallbackUrl. This demo keeps the user in the simulator and lets you query the real binding result next.
-    </p>
-    <div className="mt-5 w-full rounded-2xl border border-slate-100 bg-slate-50 p-4 text-left space-y-3">
-      <Info label="callback status" value={status || 'SUCCESS'} />
-      <Info label="payment method" value={methodLabel} />
-      <Info label="outTradeNo" value={orderNo} />
     </div>
   </div>
 );

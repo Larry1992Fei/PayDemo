@@ -3,6 +3,8 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { getMandateAmounts, PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/subscription';
 import { ArrowRight, CheckCircle2, CreditCard, Loader2, Lock, Server, ShieldCheck, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isCallbackUrl } from '@/lib/callbackReturn';
+import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 const CardIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth={2}>
@@ -283,14 +285,19 @@ export const SelfHostedApiCashier: React.FC<{
 
 const BrowserShell: React.FC<{ url: string; action?: React.ReactNode; onCallback?: () => void }> = ({ url, action, onCallback }) => {
   const callbackHandledRef = React.useRef(false);
-  const callbackPath = `${window.location.origin}${import.meta.env.BASE_URL}callback`;
+  const [mockReturnUrl, setMockReturnUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    callbackHandledRef.current = false;
+    setMockReturnUrl(null);
+  }, [url]);
 
   const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
     try {
       const iframeUrl = event.currentTarget.contentWindow?.location.href || '';
-      if (!callbackHandledRef.current && (iframeUrl.startsWith(callbackPath) || iframeUrl.startsWith(`${window.location.origin}/callback`))) {
+      if (!callbackHandledRef.current && isCallbackUrl(iframeUrl)) {
         callbackHandledRef.current = true;
-        onCallback?.();
+        setMockReturnUrl(iframeUrl);
       }
     } catch {
       // Cross-origin cashier pages cannot be inspected until they return to our callback page.
@@ -309,14 +316,23 @@ const BrowserShell: React.FC<{ url: string; action?: React.ReactNode; onCallback
         </div>
       </div>
       <div className="flex-1 bg-slate-50 relative overflow-hidden">
-        <iframe
-          src={url}
-          onLoad={handleIframeLoad}
-          className="w-full h-full border-none"
-          title="PayerMax Mandate Cashier"
-          allow="payment"
-          sandbox="allow-scripts allow-popups allow-same-origin allow-top-navigation"
-        />
+        {mockReturnUrl ? (
+          <MockReturnPage
+            businessLabel="MANDATE_CASHIER_BIND"
+            details={[{ label: 'return url', value: mockReturnUrl }]}
+            actionLabel="Continue to next step"
+            onAction={onCallback}
+          />
+        ) : (
+          <iframe
+            src={url}
+            onLoad={handleIframeLoad}
+            className="w-full h-full border-none"
+            title="PayerMax Mandate Cashier"
+            allow="payment"
+            sandbox="allow-scripts allow-popups allow-same-origin allow-top-navigation"
+          />
+        )}
       </div>
       {action && (
         <div className="p-3 bg-white border-t border-slate-100 flex-none">

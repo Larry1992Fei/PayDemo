@@ -2,30 +2,32 @@ import React from 'react';
 import { useProduct } from '@/contexts/ProductContext';
 import { Loader2, ArrowRight, CheckCircle2, Clock3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isCallbackUrl } from '@/lib/callbackReturn';
+import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 export const StepCheckout: React.FC = () => {
   const { redirectUrl, cashierMode, integrationMode, paymentMethod, lastApiResponse, toNextStep } = useProduct();
-  const [isAuthorizationReturned, setIsAuthorizationReturned] = React.useState(false);
+  const [returnSignal, setReturnSignal] = React.useState<null | 'callback' | 'postMessage' | 'fallback'>(null);
   const iframeLoadCountRef = React.useRef(0);
-  const cashierReturnHandledRef = React.useRef(false);
+  const returnHandledRef = React.useRef(false);
   const isApiMode = integrationMode === 'api';
   const isCashierMode = integrationMode === 'cashier';
-  const status = isAuthorizationReturned
+  const status = returnSignal
     ? 'SUCCESS'
     : (lastApiResponse?.data?.status || lastApiResponse?.data?.payStatus || lastApiResponse?.code);
   const hasOrderResponse = Boolean(lastApiResponse?.debug?.requestToPayerMax || lastApiResponse?.data || lastApiResponse?.code);
 
   React.useEffect(() => {
     iframeLoadCountRef.current = 0;
-    cashierReturnHandledRef.current = false;
-    setIsAuthorizationReturned(false);
+    returnHandledRef.current = false;
+    setReturnSignal(null);
   }, [redirectUrl]);
 
-  const completeCashierReturn = React.useCallback(async () => {
-    if (!isCashierMode || cashierReturnHandledRef.current) return;
-    cashierReturnHandledRef.current = true;
-    await toNextStep();
-  }, [isCashierMode, toNextStep]);
+  const markReturn = React.useCallback((signal: 'callback' | 'postMessage' | 'fallback') => {
+    if (returnHandledRef.current) return;
+    returnHandledRef.current = true;
+    setReturnSignal(signal);
+  }, []);
 
   React.useEffect(() => {
     if (!redirectUrl) return;
@@ -33,27 +35,19 @@ export const StepCheckout: React.FC = () => {
       if (event.origin.includes('payermax.com')) {
         const data = event.data;
         if (data.payStatus === 'SUCCESS' || data.status === 'SUCCESS') {
-          if (isApiMode) {
-            setIsAuthorizationReturned(true);
-          } else {
-            void toNextStep();
-          }
+          markReturn('postMessage');
         }
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [toNextStep, redirectUrl, isApiMode]);
+  }, [redirectUrl, markReturn]);
 
   const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
     try {
       const iframeUrl = event.currentTarget.contentWindow?.location.href || '';
-      if (iframeUrl && iframeUrl.startsWith(`${window.location.origin}/callback`)) {
-        if (isCashierMode) {
-          void completeCashierReturn();
-        } else {
-          void toNextStep();
-        }
+      if (iframeUrl && isCallbackUrl(iframeUrl)) {
+        markReturn('callback');
         return;
       }
     } catch {
@@ -67,11 +61,25 @@ export const StepCheckout: React.FC = () => {
     if (!isApiMode) return;
     iframeLoadCountRef.current += 1;
     if (iframeLoadCountRef.current >= 2) {
-      setIsAuthorizationReturned(true);
+      markReturn('fallback');
     }
   };
 
-  if (redirectUrl && !isAuthorizationReturned) {
+  if (redirectUrl && returnSignal) {
+    return (
+      <MockReturnPage
+        status={status}
+        orderNo={lastApiResponse?.data?.outTradeNo || lastApiResponse?.localOrderNo || lastApiResponse?.data?.orderNo}
+        methodLabel={paymentMethod}
+        businessLabel="STANDARD_PAYMENT"
+        fallback={returnSignal === 'fallback'}
+        actionLabel="Check payment result"
+        onAction={() => { void toNextStep(); }}
+      />
+    );
+  }
+
+  if (redirectUrl) {
     const shouldShowManualResultButton = integrationMode !== 'cashier';
     return (
       <div className="h-full bg-white flex flex-col animate-in slide-in-from-bottom-5 duration-500">
@@ -103,10 +111,10 @@ export const StepCheckout: React.FC = () => {
             <button
               onClick={() => {
                 if (isApiMode) {
-                  setIsAuthorizationReturned(true);
+                  markReturn('fallback');
                   return;
                 }
-                void toNextStep();
+                markReturn('fallback');
               }}
               className="w-full h-11 rounded-xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
             >

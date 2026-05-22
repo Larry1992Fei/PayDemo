@@ -1,12 +1,15 @@
 import React from 'react';
 import { useProduct } from '@/contexts/ProductContext';
 import { ShieldCheck, Lock, Cpu, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { isCallbackUrl } from '@/lib/callbackReturn';
+import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 export const StepComponentPayment: React.FC = () => {
   const { submitComponentOrder, toNextStep, isApiCalling, lastApiResponse, redirectUrl, paymentMethod } = useProduct();
   const [hasSubmitted, setHasSubmitted] = React.useState(false);
-  const [isAuthorizationReturned, setIsAuthorizationReturned] = React.useState(false);
+  const [returnSignal, setReturnSignal] = React.useState<null | 'callback' | 'fallback'>(null);
   const iframeLoadCountRef = React.useRef(0);
+  const returnHandledRef = React.useRef(false);
   const hasOrderResponse = Boolean(
     lastApiResponse?.debug?.requestToPayerMax?.url?.includes('orderAndPay') ||
     lastApiResponse?.data?.outTradeNo ||
@@ -22,14 +25,22 @@ export const StepComponentPayment: React.FC = () => {
 
   React.useEffect(() => {
     iframeLoadCountRef.current = 0;
-    setIsAuthorizationReturned(false);
+    returnHandledRef.current = false;
+    setReturnSignal(null);
   }, [redirectUrl]);
+
+  const markReturn = React.useCallback((signal: 'callback' | 'fallback') => {
+    if (returnHandledRef.current) return;
+    returnHandledRef.current = true;
+    setReturnSignal(signal);
+    setHasSubmitted(true);
+  }, []);
 
   const handleIframeLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
     try {
       const iframeUrl = event.currentTarget.contentWindow?.location.href || '';
-      if (iframeUrl && iframeUrl.startsWith(`${window.location.origin}/callback`)) {
-        void toNextStep();
+      if (iframeUrl && isCallbackUrl(iframeUrl)) {
+        markReturn('callback');
         return;
       }
     } catch {
@@ -38,12 +49,25 @@ export const StepComponentPayment: React.FC = () => {
 
     iframeLoadCountRef.current += 1;
     if (iframeLoadCountRef.current >= 2) {
-      setIsAuthorizationReturned(true);
-      setHasSubmitted(true);
+      markReturn('fallback');
     }
   };
 
-  if (redirectUrl && !isAuthorizationReturned) {
+  if (redirectUrl && returnSignal) {
+    return (
+      <MockReturnPage
+        status={status}
+        orderNo={lastApiResponse?.data?.outTradeNo || lastApiResponse?.localOrderNo || lastApiResponse?.data?.orderNo}
+        methodLabel={paymentMethod}
+        businessLabel="STANDARD_COMPONENT_PAYMENT"
+        fallback={returnSignal === 'fallback'}
+        actionLabel="Check payment result"
+        onAction={() => { void toNextStep(); }}
+      />
+    );
+  }
+
+  if (redirectUrl) {
     return (
       <div className="h-full bg-white flex flex-col animate-in slide-in-from-bottom-5 duration-500">
         <div className="h-10 bg-slate-50 flex items-center px-4 gap-2 border-b border-slate-100 flex-none">
@@ -66,7 +90,7 @@ export const StepComponentPayment: React.FC = () => {
         </div>
         <div className="p-3 bg-white border-t border-slate-100">
           <button
-            onClick={() => toNextStep()}
+            onClick={() => markReturn('fallback')}
             className="w-full h-11 rounded-xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
           >
             完成页面支付，查看支付结果

@@ -3,8 +3,11 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { AlertCircle, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { postPayerMaxDemoApi } from '@/services/payermaxClient';
 import { OrderResultPanel } from '@/components/shared/OrderResultPanel';
+import { isCallbackUrl } from '@/lib/callbackReturn';
+import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 type ActivationState = 'idle' | 'queryable' | 'failed';
+type ReturnSignal = 'callback' | 'postMessage' | 'fallback' | 'polling';
 
 export const StepActivate: React.FC = () => {
   const {
@@ -24,6 +27,8 @@ export const StepActivate: React.FC = () => {
 
   const [isQuerying, setIsQuerying] = React.useState(false);
   const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [returnSignal, setReturnSignal] = React.useState<ReturnSignal | null>(null);
+  const [returnPayload, setReturnPayload] = React.useState<Record<string, unknown>>({});
   const autoQueryRef = React.useRef(false);
   const iframeReturnHandledRef = React.useRef(false);
 
@@ -62,6 +67,35 @@ export const StepActivate: React.FC = () => {
     }
   }, [activationRedirectUrl, completeActivationWithQuery, lastApiResponse]);
 
+  // Stabilization-based iframe detection + delayed limited polling.
+  // 1. Track iframe loads — after 3 seconds of no new loads, mark as "stable"
+  // 2. If onLoad fires AFTER stable → user interacted → overlay + single query
+  // 3. If PNA blocks and onLoad never fires → limited polling kicks in after stable
+  const iframeStableRef = React.useRef(false);
+  const stabilityTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCountRef = React.useRef(0);
+  const MAX_POLL_ATTEMPTS = 20;
+  const POLL_INTERVAL_MS = 5000;
+
+  const markReturn = React.useCallback((signal: ReturnSignal, payload: Record<string, unknown> = {}) => {
+    if (iframeReturnHandledRef.current) return;
+    iframeReturnHandledRef.current = true;
+    setIsTransitioning(false);
+    setReturnSignal(signal);
+    setReturnPayload(payload);
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+  }, []);
+
+  React.useEffect(() => {
+    iframeReturnHandledRef.current = false;
+    iframeStableRef.current = false;
+    pollCountRef.current = 0;
+    setReturnSignal(null);
+    setReturnPayload({});
+    setIsTransitioning(false);
+  }, [activationRedirectUrl]);
+
   React.useEffect(() => {
     if (currentStep.id === 'pm-activate' || currentStep.id === 'pm-component') return;
     if (activationRedirectUrl || !hasOrderResponse || state !== 'queryable' || autoQueryRef.current) return;
@@ -82,24 +116,13 @@ export const StepActivate: React.FC = () => {
       const data = typeof event.data === 'object' && event.data ? event.data : {};
       const status = (data as any).payStatus || (data as any).status || (data as any).resultStatus;
       if (status) {
-        void completeActivation('PAYERMAX_POST_MESSAGE', data as Record<string, unknown>);
+        markReturn('postMessage', data as Record<string, unknown>);
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [activationRedirectUrl, completeActivation, isComponentOrderStep]);
-
-  // Stabilization-based iframe detection + delayed limited polling.
-  // 1. Track iframe loads — after 3 seconds of no new loads, mark as "stable"
-  // 2. If onLoad fires AFTER stable → user interacted → overlay + single query
-  // 3. If PNA blocks and onLoad never fires → limited polling kicks in after stable
-  const iframeStableRef = React.useRef(false);
-  const stabilityTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pollingIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-  const pollCountRef = React.useRef(0);
-  const MAX_POLL_ATTEMPTS = 20;
-  const POLL_INTERVAL_MS = 5000;
+  }, [activationRedirectUrl, isComponentOrderStep, markReturn]);
 
   // Terminal subscription statuses (INACTIVE = still waiting, keep checking)
   const TERMINAL_STATUSES = React.useMemo(() => new Set([
@@ -126,16 +149,11 @@ export const StepActivate: React.FC = () => {
         const status = result?.data?.subscriptionPlan?.subscriptionStatus || result?.data?.status;
 
         if (status && TERMINAL_STATUSES.has(status.toUpperCase())) {
-          iframeReturnHandledRef.current = true;
           if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-          // Show overlay FIRST, then delay the jump so user sees the overlay
-          setIsTransitioning(true);
-          setTimeout(() => {
-            void completeActivation('DEFERRED_POLL_FINAL_STATE', {
-              note: 'Limited polling detected terminal status after iframe stabilized.',
-              status,
-            });
-          }, 800);
+          markReturn('polling', {
+            note: 'Limited polling detected terminal status after iframe stabilized.',
+            status,
+          });
         }
       } catch {
         // ignore
@@ -145,7 +163,7 @@ export const StepActivate: React.FC = () => {
     // First poll immediately, then every POLL_INTERVAL_MS
     void doPoll();
     pollingIntervalRef.current = setInterval(doPoll, POLL_INTERVAL_MS);
-  }, [subscriptionNo, TERMINAL_STATUSES, completeActivation]);
+  }, [subscriptionNo, TERMINAL_STATUSES, markReturn]);
 
   // Cleanup polling on unmount
   React.useEffect(() => {
@@ -161,10 +179,8 @@ export const StepActivate: React.FC = () => {
     // Always try to read the URL first (works when redirect to our origin succeeds)
     try {
       const iframeUrl = event.currentTarget.contentWindow?.location.href || '';
-      if (iframeUrl && iframeUrl.startsWith(window.location.origin)) {
-        iframeReturnHandledRef.current = true;
-        if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-        void completeActivation('IFRAME_RETURN_URL', {
+      if (iframeUrl && isCallbackUrl(iframeUrl)) {
+        markReturn('callback', {
           note: 'PayerMax authorization page returned to frontCallbackUrl; query subscription status.',
           returnUrl: iframeUrl,
         });
@@ -180,14 +196,9 @@ export const StepActivate: React.FC = () => {
 
     if (iframeStableRef.current) {
       // Page was stable, this new load = user interacted with 3DS page
-      iframeReturnHandledRef.current = true;
-      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-      setIsTransitioning(true);
-      setTimeout(() => {
-        void completeActivation('IFRAME_NAVIGATION_DETECTED', {
-          note: 'Detected iframe navigation after 3DS page stabilized. Querying subscription status once.',
-        });
-      }, 1500);
+      markReturn('fallback', {
+        note: 'Detected iframe navigation after 3DS page stabilized. User can query subscription status manually.',
+      });
     } else {
       // Page still loading initially — reset the stabilization timer
       if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
@@ -198,7 +209,7 @@ export const StepActivate: React.FC = () => {
       }, 3000);
     }
 
-  }, [activationRedirectUrl, completeActivation, shouldWaitForCallbackOnly, startLimitedPolling]);
+  }, [activationRedirectUrl, markReturn, shouldWaitForCallbackOnly, startLimitedPolling]);
 
   const handleComponentOrder = async () => {
     await activateComponentSubscription(componentPaymentToken || undefined);
@@ -207,6 +218,32 @@ export const StepActivate: React.FC = () => {
   if (activationRedirectUrl) {
     const shouldShowQueryAction = false;
     const shouldHideQueryOverlay = shouldWaitForCallbackOnly;
+
+    if (returnSignal) {
+      const sourceBySignal: Record<ReturnSignal, string> = {
+        callback: 'IFRAME_RETURN_URL',
+        postMessage: 'PAYERMAX_POST_MESSAGE',
+        fallback: 'IFRAME_NAVIGATION_DETECTED',
+        polling: 'DEFERRED_POLL_FINAL_STATE',
+      };
+
+      return (
+        <BrowserShell url={(returnPayload.returnUrl as string) || activationRedirectUrl}>
+          <MockReturnPage
+            status={(returnPayload.status as string) || orderStatus || orderCode || 'SUCCESS'}
+            orderNo={lastApiResponse?.data?.outTradeNo || lastApiResponse?.localOrderNo || lastApiResponse?.data?.orderNo}
+            methodLabel={paymentMethod || 'ALL_CASHIER'}
+            businessLabel="SUBSCRIPTION_ACTIVATION"
+            fallback={returnSignal === 'fallback'}
+            details={[{ label: 'return signal', value: returnSignal }]}
+            actionLabel="Query subscription status"
+            onAction={() => { void completeActivation(sourceBySignal[returnSignal], returnPayload); }}
+            disabled={isApiCalling || isQuerying}
+            loading={isApiCalling || isQuerying}
+          />
+        </BrowserShell>
+      );
+    }
 
     return (
       <BrowserShell
