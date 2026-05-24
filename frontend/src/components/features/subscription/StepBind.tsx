@@ -1,10 +1,10 @@
 import React from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { getMandateAmounts, PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/subscription';
-import { ArrowRight, CheckCircle2, CreditCard, Loader2, Lock, Server, ShieldCheck, Wallet } from 'lucide-react';
+import { ArrowRight, CheckCircle2, CreditCard, Loader2, Server, ShieldCheck, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isCallbackUrl } from '@/lib/callbackReturn';
-import { MockReturnPage } from '@/components/shared/MockReturnPage';
+import { OrderResultPanel } from '@/components/shared/OrderResultPanel';
 
 const CardIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth={2}>
@@ -44,6 +44,8 @@ export const StepBind: React.FC = () => {
     activationRedirectUrl,
     isApiCalling,
     lastApiResponse,
+    lastApiStepId,
+    stepApiExchanges,
     bindMandatePaymentMethod,
     goNext,
   } = useSubscription();
@@ -55,6 +57,20 @@ export const StepBind: React.FC = () => {
   const isCashier = integrationMode === 'cashier';
   const isApi = integrationMode === 'api';
   const errorMessage = getBusinessError(lastApiResponse);
+  const bindStepId = subMode === 'nonperiodic' ? 'np-bind' : 'm-bind';
+  const cachedBindResponse = React.useMemo(
+    () => parseExchangeResponse(stepApiExchanges[bindStepId]?.responseBody),
+    [bindStepId, stepApiExchanges]
+  );
+  const currentBindResponse = lastApiStepId === bindStepId ? lastApiResponse : null;
+  const bindResponse = cachedBindResponse || currentBindResponse;
+  const bindStatus = getOrderStatus(bindResponse);
+  const bindCode = String(bindResponse?.code || '').toUpperCase();
+  const bindUrl = stepApiExchanges[bindStepId]?.endpoint?.url || bindResponse?.debug?.requestToPayerMax?.url || '';
+  const hasBindOrderResponse = isCashier
+    && Boolean(bindResponse)
+    && String(bindUrl).includes('orderAndPay')
+    && Boolean(bindResponse?.data?.outTradeNo || bindResponse?.data?.tradeToken || bindStatus || bindCode);
 
   const handlePrimary = async () => {
     if (isApi) {
@@ -91,6 +107,19 @@ export const StepBind: React.FC = () => {
   if (isCashier && activationRedirectUrl) {
     return (
       <BrowserShell url={activationRedirectUrl} onCallback={goNext} />
+    );
+  }
+
+  if (hasBindOrderResponse) {
+    return (
+      <OrderResultPanel
+        paymentMethod={paymentMethod ? PAYMENT_METHOD_CONFIG[paymentMethod].label : 'PayerMax Hosted Checkout'}
+        status={bindStatus || bindCode || 'PENDING'}
+        desc="PayerMax 收银台已返回 orderAndPay 结果。左侧展示本次 orderAndPay 的真实请求和响应。"
+        actionLabel="查看绑定结果"
+        onAction={goNext}
+        disabled={isApiCalling}
+      />
     );
   }
 
@@ -194,7 +223,7 @@ export const SelfHostedApiCashier: React.FC<{
     </div>
 
     <div className="flex-1 overflow-y-auto">
-      <div className="px-5 pt-4">
+      <div className="hidden px-5 pt-4">
         <div className="rounded-2xl bg-slate-900 text-white p-3 shadow-lg shadow-slate-200">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -244,7 +273,7 @@ export const SelfHostedApiCashier: React.FC<{
       </div>
 
       <div className="mx-4 mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800 font-semibold leading-relaxed">
-        API 模式下，商户页面负责收集支付信息或钱包授权要素，前端 JS 组装 paymentDetail 并调用 orderAndPay。
+        API 模式下，商户页面负责收集支付信息，用于后续调用 orderAndPay。
       </div>
 
       {mandateTokenId && (
@@ -263,10 +292,6 @@ export const SelfHostedApiCashier: React.FC<{
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-center gap-2 opacity-30 pb-6">
-        <Lock className="w-3 h-3" />
-        <span className="text-[9px] font-bold uppercase tracking-widest">PCI-DSS Secure</span>
-      </div>
     </div>
 
     <div className="p-4 bg-white border-t border-slate-100 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] z-40">
@@ -317,10 +342,11 @@ const BrowserShell: React.FC<{ url: string; action?: React.ReactNode; onCallback
       </div>
       <div className="flex-1 bg-slate-50 relative overflow-hidden">
         {mockReturnUrl ? (
-          <MockReturnPage
-            businessLabel="MANDATE_CASHIER_BIND"
-            details={[{ label: 'return url', value: mockReturnUrl }]}
-            actionLabel="Continue to next step"
+          <OrderResultPanel
+            paymentMethod="ALL_CASHIER"
+            status="PENDING"
+            desc="PayerMax 收银台已返回 orderAndPay 结果。左侧展示本次 orderAndPay 的真实请求和响应。"
+            actionLabel="查看绑定结果"
             onAction={onCallback}
           />
         ) : (
@@ -354,6 +380,22 @@ const Info: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     <div className="text-[12px] font-black text-slate-800 mt-1 break-all">{value}</div>
   </div>
 );
+
+function getOrderStatus(result: any): string | null {
+  return result?.data?.status
+    || result?.debug?.responseFromPayerMax?.data?.status
+    || result?.status
+    || null;
+}
+
+function parseExchangeResponse(responseBody?: string): any | null {
+  if (!responseBody) return null;
+  try {
+    return JSON.parse(responseBody);
+  } catch {
+    return null;
+  }
+}
 
 export function getBusinessError(result: any): string | null {
   const code = result?.code || result?.debug?.responseFromPayerMax?.code;

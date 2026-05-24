@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { getMandateAmounts } from '@/types/subscription';
-import { CheckCircle2, Clock3, RefreshCw, RotateCcw } from 'lucide-react';
+import { CheckCircle2, RotateCcw } from 'lucide-react';
 
 export const StepDeduct: React.FC = () => {
   const {
@@ -31,17 +31,8 @@ export const StepDeduct: React.FC = () => {
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         <div className="rounded-2xl bg-slate-900 p-4 text-white shadow-lg shadow-slate-200">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
-              {mitType === 'SCHEDULED' ? <Clock3 className="h-5 w-5" /> : <RefreshCw className="h-5 w-5" />}
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Merchant Initiated Transaction</p>
-              <h4 className="mt-1 text-sm font-black">{mitType}</h4>
-            </div>
-          </div>
-          <p className="mt-3 text-xs leading-relaxed text-slate-300">
-            用户首次绑定完成后，商户可使用 paymentTokenID 自行发起后续扣款，无需用户再次参与。
+          <p className="text-xs font-semibold leading-relaxed text-slate-200">
+            后续商家利用 paymentTokenID 调用 orderAndPay 接口进行扣款。
           </p>
         </div>
 

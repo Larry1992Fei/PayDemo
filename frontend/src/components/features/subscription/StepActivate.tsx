@@ -23,6 +23,8 @@ export const StepActivate: React.FC = () => {
     subMode,
     integrationMode,
     paymentMethod,
+    lastApiStepId,
+    stepApiExchanges,
   } = useSubscription();
 
   const [isQuerying, setIsQuerying] = React.useState(false);
@@ -33,30 +35,41 @@ export const StepActivate: React.FC = () => {
   const iframeReturnHandledRef = React.useRef(false);
 
   const isComponentOrderStep = currentStep.id === 'pm-component';
-  const orderStatus = getOrderStatus(lastApiResponse);
-  const orderCode = String(lastApiResponse?.code || '').toUpperCase();
-  const state = getActivationState(lastApiResponse);
+  const cachedOrderResponse = React.useMemo(
+    () => parseExchangeResponse(stepApiExchanges[currentStep.id]?.responseBody),
+    [currentStep.id, stepApiExchanges]
+  );
+  const currentStepResponse = lastApiStepId === currentStep.id ? lastApiResponse : null;
+  const activationResponse = cachedOrderResponse || currentStepResponse;
+  const orderStatus = getOrderStatus(activationResponse);
+  const orderCode = String(activationResponse?.code || '').toUpperCase();
+  const state = getActivationState(activationResponse);
   const shouldWaitForCallbackOnly = subMode === 'payermax'
     && integrationMode === 'cashier'
     && currentStep.id === 'pm-activate';
+  const orderResultDesc = integrationMode === 'api'
+    ? '前端 JS 已使用 Direct Payment 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
+    : integrationMode === 'component'
+      ? '前端 JS 已使用 paymentToken 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
+      : 'PayerMax 收银台已返回 orderAndPay 结果。左侧展示本次 orderAndPay 的真实请求和响应。';
   const hasOrderResponse = Boolean(
-    lastApiResponse?.data?.outTradeNo ||
-      lastApiResponse?.data?.tradeToken ||
+    activationResponse?.data?.outTradeNo ||
+      activationResponse?.data?.tradeToken ||
       orderStatus ||
       orderCode,
   );
 
   const completeActivation = React.useCallback(async (source: string, payload: Record<string, unknown> = {}) => {
-    const status = getOrderStatus(lastApiResponse);
+    const status = getOrderStatus(activationResponse);
     setIsQuerying(true);
     try {
       await completeActivationWithQuery({
-        outTradeNo: lastApiResponse?.data?.outTradeNo || lastApiResponse?.localOrderNo,
-        tradeToken: lastApiResponse?.data?.tradeToken,
+        outTradeNo: activationResponse?.data?.outTradeNo || activationResponse?.localOrderNo,
+        tradeToken: activationResponse?.data?.tradeToken,
         payStatus: status || payload.payStatus || 'UNKNOWN',
         orderAndPayStatus: status || 'UNKNOWN',
-        orderAndPayCode: lastApiResponse?.code,
-        orderAndPayMsg: lastApiResponse?.msg || lastApiResponse?.message,
+        orderAndPayCode: activationResponse?.code,
+        orderAndPayMsg: activationResponse?.msg || activationResponse?.message,
         redirectUrl: activationRedirectUrl,
         source,
         ...payload,
@@ -65,7 +78,7 @@ export const StepActivate: React.FC = () => {
       setIsQuerying(false);
       throw error;
     }
-  }, [activationRedirectUrl, completeActivationWithQuery, lastApiResponse]);
+  }, [activationRedirectUrl, completeActivationWithQuery, activationResponse]);
 
   // Stabilization-based iframe detection + delayed limited polling.
   // 1. Track iframe loads — after 3 seconds of no new loads, mark as "stable"
@@ -226,12 +239,26 @@ export const StepActivate: React.FC = () => {
         fallback: 'IFRAME_NAVIGATION_DETECTED',
         polling: 'DEFERRED_POLL_FINAL_STATE',
       };
+      const shouldUseOrderResultStyle = integrationMode === 'api' || integrationMode === 'component';
+
+      if (shouldUseOrderResultStyle) {
+        return (
+          <OrderResultPanel
+            paymentMethod={paymentMethod || 'ALL_CASHIER'}
+            status={(returnPayload.status as string) || orderStatus || orderCode || 'SUCCESS'}
+            desc={orderResultDesc}
+            actionLabel="查看支付结果"
+            onAction={() => { void completeActivation(sourceBySignal[returnSignal], returnPayload); }}
+            disabled={isApiCalling || isQuerying}
+          />
+        );
+      }
 
       return (
         <BrowserShell url={(returnPayload.returnUrl as string) || activationRedirectUrl}>
           <MockReturnPage
             status={(returnPayload.status as string) || orderStatus || orderCode || 'SUCCESS'}
-            orderNo={lastApiResponse?.data?.outTradeNo || lastApiResponse?.localOrderNo || lastApiResponse?.data?.orderNo}
+            orderNo={activationResponse?.data?.outTradeNo || activationResponse?.localOrderNo || activationResponse?.data?.orderNo}
             methodLabel={paymentMethod || 'ALL_CASHIER'}
             businessLabel="SUBSCRIPTION_ACTIVATION"
             fallback={returnSignal === 'fallback'}
@@ -352,6 +379,7 @@ export const StepActivate: React.FC = () => {
         paymentMethod={paymentMethod || 'ALL_CASHIER'}
         status={orderStatus || orderCode || 'UNKNOWN'}
         desc="本步骤保留支付下单激活结果。点击下方按钮后，再调用 subscriptionQuery 进入最终结果页。"
+        actionLabel="查看支付结果"
         onAction={() => {
           void completeActivation('COMPONENT_ORDER_STATUS_CONFIRMED', {
             status: orderStatus,
@@ -368,9 +396,8 @@ export const StepActivate: React.FC = () => {
       <OrderResultPanel
         paymentMethod={paymentMethod || 'ALL_CASHIER'}
         status={orderStatus || orderCode || 'UNKNOWN'}
-        desc={integrationMode === 'api'
-          ? '前端 JS 已使用 Direct_Payment 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
-          : '前端 JS 已使用 paymentToken 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'}
+        desc={orderResultDesc}
+        actionLabel="查看支付结果"
         onAction={() => {
           void completeActivation(isComponentOrderStep ? 'COMPONENT_ORDER_STATUS_CONFIRMED' : 'ORDER_AND_PAY_STATUS_CONFIRMED', {
             status: orderStatus,
@@ -509,12 +536,22 @@ function getOrderStatus(result: any): string | null {
     || null;
 }
 
+function parseExchangeResponse(responseBody?: string): any | null {
+  if (!responseBody) return null;
+  try {
+    return JSON.parse(responseBody);
+  } catch {
+    return null;
+  }
+}
+
 function getActivationState(result: any): ActivationState {
   const status = getOrderStatus(result);
   if (status) return 'queryable';
 
   const code = String(result?.code || '').toUpperCase();
   if (code && !['APPLY_SUCCESS', 'PAY_SUCCESS', 'SUCCESS'].includes(code)) return 'failed';
+  if (['APPLY_SUCCESS', 'PAY_SUCCESS', 'SUCCESS'].includes(code)) return 'queryable';
 
   return 'idle';
 }

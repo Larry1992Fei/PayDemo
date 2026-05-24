@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { AlertCircle, ArrowRight, CheckCircle2, Copy, Loader2, Lock, Server, ShieldCheck, Wallet } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, Copy, Loader2, ShieldCheck, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DEMO_MIT_MANAGEMENT_URL } from '@/config/payermaxDemoUrls';
 import type { PaymentMethod } from '@/types/subscription';
@@ -96,6 +96,7 @@ export const StepComponent: React.FC = () => {
       : normalizedParams.amount;
   const amountText = Number(displayAmount || 0).toFixed(displayCurrency === 'KRW' ? 0 : 2);
   const isEmbeddedInPlanStep = subMode === 'payermax' && currentStep.id === 'pm-2';
+  const currentMethodLabel = methods.find(method => method.id === currentMethod)?.label || currentMethod.toUpperCase();
   const buildMitCanMakePaymentArgs = () => {
     const firstPeriodStartDate = buildFirstPeriodStartDate();
 
@@ -425,7 +426,7 @@ export const StepComponent: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {!isEmbeddedInPlanStep && (
+        {subMode === 'payermax' && !isEmbeddedInPlanStep && (
         <div className="px-5 pt-4">
           <div className="rounded-2xl bg-slate-900 text-white p-3 shadow-lg shadow-slate-200">
             <div className="flex items-center justify-between gap-3">
@@ -510,7 +511,7 @@ export const StepComponent: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-[10px] font-semibold text-slate-400 leading-relaxed">
-                  {methods.find(m => m.id === currentMethod)?.label} 组件已加载。真实组件按钮会展示在底部操作区，点击后获取 paymentToken，并由前端 JS 调用 orderAndPay 激活订阅。
+                  {currentMethodLabel} 组件已加载。真实组件按钮会展示在底部操作区，点击后获取 paymentToken，用于后续调用 orderAndPay 激活订阅。
                 </p>
               )}
             </div>
@@ -535,50 +536,24 @@ export const StepComponent: React.FC = () => {
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-center gap-2 opacity-30 pb-6">
-          <Lock className="w-3 h-3" />
-          <span className="text-[9px] font-bold uppercase tracking-widest">PCI-DSS Secure</span>
-        </div>
-
-        {hasToken && subMode !== 'payermax' && (
-          <div className="mx-4 mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left shadow-sm animate-in slide-in-from-bottom-2 duration-300">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                <Server className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-[12px] font-black text-emerald-900">Token Ready</h4>
-                  <span className="text-[9px] font-black text-emerald-700 bg-white/70 border border-emerald-200 px-2 py-0.5 rounded-full">
-                    SUBSCRIPTION TOKENIZED
-                  </span>
-                </div>
-                <p className="text-[10px] text-emerald-800/80 font-semibold leading-relaxed mt-1">
-                  将 paymentToken、sessionKey、subscriptionNo 用于浏览器 JS 直连 orderAndPay 完成订阅激活。
-                </p>
-              </div>
+        {hasToken && (
+          <div className="mx-4 mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-left shadow-sm animate-in slide-in-from-bottom-2 duration-300">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">paymentToken</span>
+              <button type="button" onClick={copyToken} className="h-7 px-2 rounded-lg bg-slate-900 text-white text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-transform">
+                <Copy className="w-3 h-3" />
+                {copied ? 'Copied' : 'Copy'}
+              </button>
             </div>
-
-            <div className="mt-3 rounded-xl bg-white border border-emerald-100 p-3">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">paymentToken</span>
-                <button type="button" onClick={copyToken} className="h-7 px-2 rounded-lg bg-slate-900 text-white text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-transform">
-                  <Copy className="w-3 h-3" />
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <div className="text-[10px] font-mono text-slate-700 break-all leading-relaxed bg-slate-50 border border-slate-100 rounded-lg p-2">
-                {componentPaymentToken}
-              </div>
-              <div className="mt-2 grid grid-cols-[82px_1fr] gap-2 text-[10px] leading-relaxed">
-                <span className="font-black text-slate-400 uppercase">sessionKey</span>
-                <span className="font-mono text-slate-600 truncate">{componentSessionData?.sessionKey || '-'}</span>
-                <span className="font-black text-slate-400 uppercase">PayerMax API</span>
-                <span className="font-mono text-slate-600">POST /api/orderAndPay</span>
-              </div>
+            <div className="text-[10px] font-mono text-slate-700 break-all leading-relaxed rounded-xl border border-emerald-100 bg-white px-3 py-2">
+              {componentPaymentToken}
             </div>
+            <p className="mt-2 text-[10px] font-semibold leading-relaxed text-emerald-800/80">
+              将 paymentToken、sessionKey、subscriptionNo 用于后续 orderAndPay 激活订阅。
+            </p>
           </div>
         )}
+
       </div>
 
       {(subMode === 'payermax' || subMode === 'merchant' || subMode === 'nonperiodic') && (

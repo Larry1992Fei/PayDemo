@@ -14,7 +14,7 @@ export const PAYMENT_INTEGRATION_CONFIG: Record<PaymentIntegrationMode, { label:
   api: { 
     label: 'API 模式', 
     apiValue: 'DIRECT_API',
-    desc: '完全自主控制支付 UI，通过前端 JS 直连 PayerMax'
+    desc: '完全自主控制支付 UI'
   },
   component: { 
     label: '前置组件模式', 

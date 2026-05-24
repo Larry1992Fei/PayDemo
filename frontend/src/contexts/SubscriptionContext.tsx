@@ -9,7 +9,7 @@ import { DEMO_MIT_MANAGEMENT_URL } from '@/config/payermaxDemoUrls';
 import { createDemoUserId } from '@/lib/demoIds';
 import { showUiWarning } from '@/lib/uiFeedback';
 
-// 鈹€鈹€鈹€ Context 鎺ュ彛 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// Context 接口
 interface SubscriptionContextType {
   subMode: SubMode;
   integrationMode: IntegrationMode;
@@ -25,7 +25,7 @@ interface SubscriptionContextType {
   setSubscriptionType: (t: SubscriptionType) => void;
   updateFormParam: <K extends keyof SubscriptionFormParams>(key: K, value: SubscriptionFormParams[K]) => void;
 
-  // 鍔ㄦ€佽绠椾骇鐗╋紙涓嶅厑璁稿閮ㄤ慨鏀癸級
+  // 动态计算产品信息，不允许外部修改
   steps: StepConfig[];
   currentStepIndex: number;
   currentStep: StepConfig;
@@ -39,7 +39,7 @@ interface SubscriptionContextType {
   handleActivationCallback: (callbackData: any) => void;
   reset: () => void;
 
-  // 鏂板API鐩稿叧鐘舵€佸拰鏂规硶
+  // API 展示状态与方法
   isApiCalling: boolean;
   lastApiResponse: any;
   lastApiEndpoint: { method: string; url: string } | null;
@@ -92,7 +92,7 @@ function getPaymentMethodType(payment?: PaymentMethod | null): string | undefine
 }
 
 function buildMitManagementUrl(payment?: PaymentMethod | null): Record<string, string> {
-  // 褰?payment 涓虹┖锛堝叏閲忔敹閾跺彴妯″紡锛夋垨鑰呬负 ApplePay/GooglePay 鏃舵敞鍏ョ鐞嗗湴鍧€
+  // payment 为空（全量收银台）或 Apple Pay/Google Pay 时注入管理地址
   return !payment || payment === 'applepay' || payment === 'googlepay'
     ? { mitManagementUrl: MIT_MANAGEMENT_URL }
     : {};
@@ -158,7 +158,7 @@ function extractPaymentTokenId(result: any): string | null {
     || null;
 }
 
-// 鈹€鈹€鈹€ Provider 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// Provider
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const storedIntegrationMode = (sessionStorage.getItem('subscription.integrationMode') as IntegrationMode) || 'cashier';
   const [subMode, setSubModeState] = useState<SubMode>((sessionStorage.getItem('subscription.subMode') as SubMode) || 'payermax');
@@ -277,7 +277,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   ]);
 
 
-  // 鈹€鈹€ 姝ラ鏁扮粍锛堝姩鎬佽绠楋紝鍓嶇疆缁勪欢鏃惰嚜鍔ㄥ涓€姝ワ級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 步骤数组：根据模式动态计算，前置组件模式会增加一步
   const steps = useMemo(
     () => getStepsForSubMode(subMode, integrationMode),
     [subMode, integrationMode]
@@ -324,8 +324,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     ].forEach(key => sessionStorage.removeItem(key));
   }, [clearApiDisplay]);
 
-  // 鈹€鈹€ 瀹炴椂鎶ユ枃锛堟牴鎹叏閲忕姸鎬佽绠楋級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
-  // 鈹€鈹€ Actions 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 实时报文：根据全量状态计算
+  // Actions
   const setSubMode = useCallback((m: SubMode) => {
     setSubModeState(m);
     if (m !== 'payermax') {
@@ -504,7 +504,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     flash();
   }, [flash]);
 
-  // 鈹€鈹€ API 鏂规硶 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // API 方法
   const recordApiExchange = useCallback((
     result: any,
     localRequest: { method: string; url: string; body: unknown },
@@ -755,6 +755,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       : integrationMode === 'cashier'
         ? (paymentMethod || storedPaymentMethod || '')
         : paymentMethod;
+    if (integrationMode === 'component' && (!componentSessionData?.sessionKey || !componentPaymentToken)) {
+      showUiWarning('请先在右侧仿真手机内完成前置组件授权，获取 paymentToken 后再执行 orderAndPay。');
+      return;
+    }
     const context = getMandateContext();
     setIsApiCalling(true);
     setActivationRedirectUrl(null);
@@ -819,6 +823,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       || lastApiResponse?.debug?.requestToPayerMax?.body?.data?.outTradeNo;
 
     if (!queryNo) {
+      showUiWarning('请先完成首次绑定下单，拿到真实订单号后再查询绑定结果。');
       const localResult = {
         code: 'MISSING_QUERY_PARAMS',
         msg: '缺少真实 outTradeNo，无法调用 orderQuery 获取 paymentTokenID。',
@@ -874,7 +879,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const deductWithMandateToken = useCallback(async (stepIdOverride?: string) => {
     const context = getMandateContext();
     if (!mandateTokenId) {
-      throw new Error('缺少真实 paymentTokenID，请先完成首次绑定并调用 orderQuery。');
+      showUiWarning('请先完成首次绑定并通过 orderQuery 获取 paymentTokenID，再发起后续扣款。');
+      return;
     }
     const tokenId = mandateTokenId;
     const effectivePaymentMethod = (mandatePaymentMethod as PaymentMethod) || paymentMethod;
@@ -929,11 +935,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const activateComponentSubscription = useCallback(async (paymentTokenOverride?: string) => {
     if (!subscriptionNo) {
-      throw new Error('订阅号不存在，请先创建订阅计划');
+      showUiWarning('请先创建订阅计划，再执行前置组件激活下单。');
+      return;
     }
     const resolvedPaymentToken = paymentTokenOverride || componentPaymentToken;
     if (!componentSessionData?.sessionKey || !resolvedPaymentToken) {
-      throw new Error('请先完成前置组件授权并获取 paymentToken');
+      showUiWarning('请先在右侧仿真手机内完成前置组件授权并获取 paymentToken。');
+      return;
     }
 
     setIsApiCalling(true);
@@ -969,28 +977,57 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [subscriptionNo, componentSessionData, componentPaymentToken, paymentMethod, subscriptionType, formParams, subscriptionUserId, flash, recordApiExchange]);
 
   const querySubscriptionStatus = useCallback(async (callbackData?: any) => {
-    void callbackData;
     if (!subscriptionNo) {
       throw new Error('订阅号不存在，无法查询订阅状态');
     }
+
+    const previousActivation = lastApiResponse;
+    const previousActivationData = previousActivation?.debug?.requestToPayerMax?.body?.data || {};
+    const previousCallback = previousActivation?.localActivationCallback || {};
+    const activationSnapshot = {
+      ...previousCallback,
+      ...callbackData,
+      amount: previousCallback.amount
+        || callbackData?.amount
+        || previousActivation?.localAmount
+        || previousActivationData.totalAmount
+        || previousActivationData.amount,
+      currency: previousCallback.currency
+        || callbackData?.currency
+        || previousActivation?.localCurrency
+        || previousActivationData.currency,
+      outTradeNo: previousCallback.outTradeNo
+        || callbackData?.outTradeNo
+        || previousActivation?.localOrderNo
+        || previousActivation?.data?.outTradeNo
+        || previousActivationData.outTradeNo,
+      orderAndPayStatus: previousCallback.orderAndPayStatus
+        || callbackData?.orderAndPayStatus
+        || previousActivation?.data?.status
+        || previousActivation?.code,
+    };
 
     setIsApiCalling(true);
     try {
       const requestBody = { subscriptionNo };
       const result = await postPayerMaxDemoApi('/api/subscriptionQuery', requestBody);
-      setLastApiResponse(result);
+      const enrichedResult = {
+        ...result,
+        localActivationCallback: activationSnapshot,
+      };
+      setLastApiResponse(enrichedResult);
       setLastApiStepId('pm-complete');
-      recordApiExchange(result, {
+      recordApiExchange(enrichedResult, {
         method: 'POST',
         url: '/api/subscriptionQuery',
         body: requestBody
       }, 'pm-complete');
       flash();
-      return result;
+      return enrichedResult;
     } finally {
       setIsApiCalling(false);
     }
-  }, [subscriptionNo, flash, recordApiExchange]);
+  }, [subscriptionNo, lastApiResponse, flash, recordApiExchange]);
 
   const completeActivationWithQuery = useCallback(async (callbackData?: any) => {
     if (subMode === 'merchant' || subMode === 'nonperiodic') {
@@ -1004,12 +1041,17 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const goNextWithApi = useCallback(async (selectedPaymentMethod?: PaymentMethod) => {
     if (currentStep.id === 'pm-2' && integrationMode === 'component') {
+      if (!componentPaymentToken) {
+        showUiWarning('请先在右侧仿真手机内完成前置组件授权，获取 paymentToken 后再执行 orderAndPay。');
+        return;
+      }
+      await activateComponentSubscription();
       goNext();
       return;
     }
 
     if (currentStep.id === 'pm-1') {
-      // 绗竴姝ュ畬鎴愬悗鑷姩杩涘叆鍒涘缓璁㈤槄
+      // 第一步完成后自动进入创建订阅
       goNext();
     } else if (currentStep.id === 'pm-2') {
       const result = await activateSubscription(selectedPaymentMethod, 'pm-activate');
@@ -1033,7 +1075,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (!componentSessionData) {
         await prepareComponentSession();
       } else if (!componentPaymentToken) {
-        generateComponentToken();
+        showUiWarning('请先在右侧仿真手机内完成前置组件授权，获取 paymentToken 后再执行 orderAndPay。');
       } else {
         await activateComponentSubscription();
       }
@@ -1050,7 +1092,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       if (!componentSessionData) {
         await prepareComponentSession(currentStep.id);
       } else if (!componentPaymentToken) {
-        generateComponentToken();
+        showUiWarning('请先在右侧仿真手机内选择支付方式并获取 paymentToken。paymentToken 只能由组件授权后返回。');
       } else {
         const orderStepId = currentStep.id === 'm-component' ? 'm-order' : 'np-order';
         const result = await bindMandatePaymentMethod(selectedPaymentMethod, orderStepId);
@@ -1059,6 +1101,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
     } else if (currentStep.id === 'm-order' || currentStep.id === 'np-order') {
+      if (integrationMode === 'component' && !componentPaymentToken) {
+        showUiWarning('请先在右侧仿真手机内完成前置组件授权，获取 paymentToken 后再执行首次绑定下单。');
+        return;
+      }
       await bindMandatePaymentMethod(selectedPaymentMethod, currentStep.id);
     } else if (currentStep.id === 'm-bound' || currentStep.id === 'np-bound') {
       await queryMandateBindingStatus(currentStep.id);
@@ -1067,7 +1113,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } else {
       goNext();
     }
-  }, [currentStep.id, integrationMode, goNext, activateSubscription, componentSessionData, componentPaymentToken, prepareComponentSession, generateComponentToken, activateComponentSubscription, bindMandatePaymentMethod, queryMandateBindingStatus, deductWithMandateToken, completeActivationWithQuery, paymentMethod]);
+  }, [currentStep.id, integrationMode, goNext, activateSubscription, componentSessionData, componentPaymentToken, prepareComponentSession, activateComponentSubscription, bindMandatePaymentMethod, queryMandateBindingStatus, deductWithMandateToken, completeActivationWithQuery, paymentMethod]);
 
   return (
     <SubscriptionContext.Provider value={{
@@ -1085,7 +1131,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-// 鈹€鈹€鈹€ Hook 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// Hook
 export const useSubscription = () => {
   const ctx = useContext(SubscriptionContext);
   if (!ctx) throw new Error('useSubscription must be used within <SubscriptionProvider>');

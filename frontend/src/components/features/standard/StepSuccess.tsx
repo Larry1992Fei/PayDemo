@@ -1,13 +1,13 @@
 import React from 'react';
 import { useProduct } from '@/contexts/ProductContext';
-import { Check, RefreshCw, Server, MonitorCheck, SearchCheck, XCircle, Clock3 } from 'lucide-react';
+import { Check, XCircle, Clock3 } from 'lucide-react';
 
 export const StepSuccess: React.FC = () => {
   const { paymentMethod, lastApiResponse, resetFlow, amount, currency, queryOrderStatus } = useProduct();
   const orderNo = lastApiResponse?.localOrderNo || lastApiResponse?.data?.orderNo || lastApiResponse?.data?.outTradeNo || 'ORDER_PENDING';
   const queryOutTradeNo = lastApiResponse?.data?.outTradeNo || orderNo;
   const tradeToken = lastApiResponse?.data?.tradeToken;
-  const [queryState, setQueryState] = React.useState<'idle' | 'syncing' | 'received' | 'failed'>('idle');
+  const [, setQueryState] = React.useState<'idle' | 'syncing' | 'received' | 'failed'>('idle');
   const [orderSnapshot, setOrderSnapshot] = React.useState<any>(null);
   const didQuery = React.useRef(false);
 
@@ -56,24 +56,13 @@ export const StepSuccess: React.FC = () => {
     };
   }, [markFrontCallback, runOrderQuery, syncOrder]);
 
-  const queryLabel = queryState === 'received'
-    ? 'Queried'
-    : queryState === 'syncing'
-      ? 'Querying'
-      : queryState === 'failed'
-        ? 'Failed'
-        : 'Waiting';
   const queryStatus = lastApiResponse?.data?.status || orderSnapshot?.status || orderSnapshot?.payStatus || 'PENDING';
   const normalizedStatus = String(queryStatus).toUpperCase();
   const isFailed = ['FAILED', 'FAIL', 'PAY_FAILED', 'TRADE_FAILED', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(normalizedStatus);
   const isSuccess = ['SUCCESS', 'PAY_SUCCESS', 'TRADE_SUCCESS'].includes(normalizedStatus);
   const pageTone = isFailed ? 'red' : isSuccess ? 'emerald' : 'amber';
   const pageTitle = isFailed ? 'Payment Failed' : isSuccess ? 'Payment Successful' : 'Payment Pending';
-  const pageSubtitle = isFailed
-    ? 'Browser return is complete. orderQuery confirms the payment failed.'
-    : isSuccess
-      ? 'Browser return is complete. Payment result is verified by orderQuery.'
-      : 'Browser return is complete. Waiting for final payment result from orderQuery.';
+  const pageSubtitle = '落地页已返回';
   const pageClass = pageTone === 'red'
     ? 'bg-red-500 text-white'
     : pageTone === 'amber'
@@ -89,11 +78,6 @@ export const StepSuccess: React.FC = () => {
     : isSuccess
       ? <Check className="w-8 h-8" />
       : <Clock3 className="w-8 h-8" />;
-  const solidStatusClass = isFailed
-    ? "text-[10px] font-black px-2 py-1 rounded-full bg-white text-red-600 shrink-0"
-    : isSuccess
-      ? "text-[10px] font-black px-2 py-1 rounded-full bg-white text-emerald-600 shrink-0"
-      : "text-[10px] font-black px-2 py-1 rounded-full bg-white text-amber-600 shrink-0";
 
   return (
     <div className={`flex flex-col items-center h-full p-5 text-center space-y-4 animate-in zoom-in-90 duration-500 relative overflow-hidden ${pageClass}`}>
@@ -109,67 +93,9 @@ export const StepSuccess: React.FC = () => {
         <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/20"><span className="text-sm font-medium">Total Amount</span><span className="text-lg font-extrabold">{currency} {amount}</span></div>
         <div className="flex justify-between items-center"><span className="text-sm font-medium">Query Status</span><span className="text-sm font-bold">{queryStatus}</span></div>
       </div>
-      <div className="w-full max-w-xs bg-white/10 backdrop-blur-sm rounded-xl p-3 relative z-10 space-y-3 text-left">
-        <FlowRow
-          icon={<Server className="w-4 h-4" />}
-          title="Order Created"
-          subtitle="/api/orderAndPay"
-          status={orderSnapshot?.payStatus || lastApiResponse?.data?.status || 'PENDING'}
-          solid
-          solidClassName={solidStatusClass}
-        />
-        <FlowRow
-          icon={<MonitorCheck className="w-4 h-4" />}
-          title="Payment Return"
-          subtitle={orderSnapshot?.frontCallbackReceived ? 'frontCallbackUrl' : 'frontCallbackUrl (local)'}
-          status="Received"
-        />
-        <div className="flex items-center justify-between gap-3">
-          <FlowRow
-            icon={<SearchCheck className="w-4 h-4" />}
-            title="Payment Query"
-            subtitle="/api/orderQuery"
-            status=""
-          />
-          <button
-            onClick={runOrderQuery}
-            disabled={queryState === 'syncing'}
-            className="text-[10px] font-black px-2 py-1 rounded-full bg-white/15 border border-white/20 flex items-center gap-1 disabled:opacity-60 shrink-0"
-          >
-            {queryState === 'syncing' && <RefreshCw className="w-3 h-3 animate-spin" />}
-            {queryLabel}
-          </button>
-        </div>
-      </div>
       <div className="w-full pt-4 border-t border-white/20 mt-auto relative z-10">
         <button onClick={() => resetFlow()} className="w-full h-12 bg-white text-emerald-600 font-bold rounded-xl shadow-lg active:scale-95 transition-transform">Start New Payment</button>
       </div>
     </div>
   );
 };
-
-const FlowRow: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  status: string;
-  solid?: boolean;
-  solidClassName?: string;
-}> = ({ icon, title, subtitle, status, solid, solidClassName }) => (
-  <div className="flex items-center justify-between gap-3">
-    <div className="flex items-center gap-2 min-w-0">
-      <div className="w-8 h-8 rounded-xl bg-white/15 border border-white/15 flex items-center justify-center shrink-0">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-black uppercase tracking-widest text-white/60">{title}</p>
-        <p className="text-xs font-bold truncate">{subtitle}</p>
-      </div>
-    </div>
-    {status && (
-      <span className={solid ? (solidClassName || "text-[10px] font-black px-2 py-1 rounded-full bg-white text-emerald-600 shrink-0") : "text-[10px] font-black px-2 py-1 rounded-full bg-white/15 border border-white/20 shrink-0"}>
-        {status}
-      </span>
-    )}
-  </div>
-);

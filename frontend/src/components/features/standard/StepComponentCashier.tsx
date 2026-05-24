@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useProduct } from '@/contexts/ProductContext';
-import { Lock, CheckCircle2, ShieldCheck, Loader2, ArrowRight, Wallet, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Loader2, ArrowRight, Wallet, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CardIcon = () => (
@@ -26,6 +26,7 @@ export const StepComponentCashier: React.FC = () => {
   const isInitialized = useRef<string | null>(null);
 
   useEffect(() => {
+    if (paymentToken) return;
     if (!paymentMethod || !sessionData || isInitialized.current === paymentMethod) return;
 
     const initSDK = () => {
@@ -75,7 +76,7 @@ export const StepComponentCashier: React.FC = () => {
                 --bg-color-input: #f9fafb; 
                 --border-radius-input: 12px;
                 --border-color-input: #f3f4f6;
-                --height-input: 44px;
+                --height-input: 38px;
               }`
             }]
           });
@@ -119,7 +120,7 @@ export const StepComponentCashier: React.FC = () => {
       } catch (err) { console.error(err); }
     };
     initSDK();
-  }, [sessionData, paymentMethod]);
+  }, [sessionData, paymentMethod, paymentToken]);
 
   const handleTokenGen = async (activeInstance?: any) => {
     const targetInstance = activeInstance || instanceRef.current;
@@ -147,6 +148,7 @@ export const StepComponentCashier: React.FC = () => {
   };
 
   const handleSelect = (id: any) => {
+    if (paymentToken) return;
     if (paymentMethod === id) return;
     setPaymentMethod(id);
     if (!sessionData) applySession();
@@ -168,7 +170,7 @@ export const StepComponentCashier: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-[#f8f9fb] font-sans relative">
       {/* 极简 Header */}
-      <div className="bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 z-40">
+      <div className="bg-white px-5 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-indigo-100">
              <ShieldCheck className="w-4 h-4 text-white" />
@@ -182,9 +184,9 @@ export const StepComponentCashier: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <p className="px-5 pt-5 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Method</p>
+        <p className="px-5 pt-3 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Method</p>
         
-        <div className="px-4 space-y-2">
+        <div className="px-4 space-y-1.5">
           {methods.map((m) => {
             const isSelected = paymentMethod === m.id;
             return (
@@ -192,7 +194,7 @@ export const StepComponentCashier: React.FC = () => {
                 <button
                   onClick={() => handleSelect(m.id as any)}
                   className={cn(
-                    "w-full px-4 py-3 bg-white rounded-2xl border transition-all flex items-center justify-between",
+                    "w-full px-4 py-2.5 bg-white rounded-2xl border transition-all flex items-center justify-between",
                     isSelected
                       ? "border-indigo-600 bg-white ring-1 ring-indigo-600"
                       : "border-slate-100 hover:border-slate-200"
@@ -200,7 +202,7 @@ export const StepComponentCashier: React.FC = () => {
                 >
                   <div className="flex items-center gap-3.5">
                     <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm", 
+                      "w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm",
                       m.bg
                     )}>
                       {m.icon}
@@ -220,11 +222,11 @@ export const StepComponentCashier: React.FC = () => {
 
                 {/* CARD 区域 */}
                 {m.id === 'card' && isSelected && (
-                  <div className="mt-2 mb-4 animate-in slide-in-from-top-2 duration-300">
-                    <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-                      <div id="pmx-inline-card-container" className="min-h-[120px]">
+                  <div className="mt-1.5 mb-2 animate-in slide-in-from-top-2 duration-300">
+                    <div className="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm">
+                      <div id="pmx-inline-card-container" className="min-h-[96px]">
                          {sdkStatus === 'loading' && (
-                           <div className="flex items-center justify-center py-10">
+                           <div className="flex items-center justify-center py-8">
                               <Loader2 className="w-6 h-6 animate-spin text-slate-200" />
                            </div>
                          )}
@@ -237,13 +239,8 @@ export const StepComponentCashier: React.FC = () => {
           })}
         </div>
 
-        <div className="mt-8 flex items-center justify-center gap-2 opacity-30 pb-10">
-           <Lock className="w-3 h-3" />
-           <span className="text-[9px] font-bold uppercase tracking-widest">PCI-DSS Secure</span>
-        </div>
-
         {paymentToken && (
-          <div className="mx-4 mt-3 mb-5 rounded-xl border border-emerald-100 bg-white px-3.5 py-2.5 text-left shadow-sm animate-in fade-in slide-in-from-bottom-1 duration-300">
+          <div className="mx-4 mt-2 mb-3 rounded-xl border border-emerald-100 bg-white px-3.5 py-2 text-left shadow-sm animate-in fade-in slide-in-from-bottom-1 duration-300">
             <div className="truncate font-mono text-[10px] font-semibold text-slate-700">
               <span className="font-black uppercase tracking-widest text-emerald-700">Token: </span>
               {paymentToken}

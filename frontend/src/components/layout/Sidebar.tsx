@@ -104,9 +104,7 @@ const SubscriptionSidebar: React.FC = () => {
         {paymentMethod === 'apm' && (
           <div className="mt-2 p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 leading-relaxed font-semibold">
             APM 订阅激活传 ONE_TOUCH，并默认 targetOrg: KAKAOPAY。<br />
-            当前演示已固定使用 KR / KRW。<br />
-            切换 APM 后币种会同步为 KRW；后续扣款 1000，优惠期 100，试用激活 0。<br />
-            API 模式按 KAKAOPAY 组装参数；前置组件模式暂不支持 APM。
+            当前演示已固定使用 KR / KRW。
           </div>
         )}
         {false && paymentMethod === 'apm' && (

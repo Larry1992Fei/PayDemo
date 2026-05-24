@@ -4,7 +4,6 @@ import { getMandateAmounts, PAYMENT_METHOD_CONFIG } from '@/types/subscription';
 import { AlertCircle, ArrowRight, CreditCard, Loader2, Server } from 'lucide-react';
 import { OrderResultPanel } from '@/components/shared/OrderResultPanel';
 import { isCallbackUrl } from '@/lib/callbackReturn';
-import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 export const StepMandateOrder: React.FC = () => {
   const {
@@ -20,16 +19,32 @@ export const StepMandateOrder: React.FC = () => {
     lastApiResponse,
     lastApiEndpoint,
     lastApiStepId,
+    stepApiExchanges,
     bindMandatePaymentMethod,
     completeActivationWithQuery,
   } = useSubscription();
 
   const amounts = getMandateAmounts(subMode, formParams, paymentMethod);
-  const status = getOrderStatus(lastApiResponse);
-  const code = String(lastApiResponse?.code || '').toUpperCase();
-  const requestUrl = lastApiResponse?.debug?.requestToPayerMax?.url || lastApiEndpoint?.url || '';
-  const isCurrentOrderExchange = lastApiStepId === currentStep.id && String(requestUrl).includes('orderAndPay');
-  const hasOrderResponse = isCurrentOrderExchange && Boolean(lastApiResponse?.data?.outTradeNo || lastApiResponse?.data?.tradeToken || status || code);
+  const orderStepId = integrationMode === 'cashier'
+    ? (subMode === 'nonperiodic' ? 'np-bind' : 'm-bind')
+    : currentStep.id;
+  const currentExchange = stepApiExchanges[orderStepId] || stepApiExchanges[currentStep.id];
+  const cachedOrderResponse = React.useMemo(
+    () => parseExchangeResponse(currentExchange?.responseBody),
+    [currentExchange?.responseBody]
+  );
+  const currentStepResponse = lastApiStepId === orderStepId || lastApiStepId === currentStep.id ? lastApiResponse : null;
+  const orderResponse = cachedOrderResponse || currentStepResponse;
+  const status = getOrderStatus(orderResponse);
+  const code = String(orderResponse?.code || '').toUpperCase();
+  const requestUrl = currentExchange?.endpoint?.url || orderResponse?.debug?.requestToPayerMax?.url || lastApiEndpoint?.url || '';
+  const isCurrentOrderExchange = Boolean(orderResponse) && String(requestUrl).includes('orderAndPay');
+  const hasOrderResponse = isCurrentOrderExchange && Boolean(orderResponse?.data?.outTradeNo || orderResponse?.data?.tradeToken || status || code);
+  const resultPanelDesc = integrationMode === 'cashier'
+    ? 'PayerMax 收银台已返回 orderAndPay 结果。左侧展示本次 orderAndPay 的真实请求和响应。'
+    : integrationMode === 'api'
+      ? '前端 JS 已使用 Direct Payment 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
+      : '前端 JS 已使用 paymentToken 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。';
   const isComponent = integrationMode === 'component';
   const methodLabel = paymentMethod ? PAYMENT_METHOD_CONFIG[paymentMethod].label : 'PayerMax Hosted Checkout';
   const canSubmit = !isApiCalling && (!isComponent || Boolean(componentPaymentToken && componentSessionData?.sessionKey));
@@ -43,6 +58,8 @@ export const StepMandateOrder: React.FC = () => {
         || (subMode === 'nonperiodic' && integrationMode === 'api' && currentStep.id === 'np-order')
       )
   );
+  const shouldHideRedirectAction = (subMode === 'merchant' || subMode === 'nonperiodic')
+    && (integrationMode === 'api' || integrationMode === 'component');
 
   React.useEffect(() => {
     callbackHandledRef.current = false;
@@ -74,43 +91,49 @@ export const StepMandateOrder: React.FC = () => {
     }
   };
 
+  if (mockReturnUrl) {
+    return (
+      <OrderResultPanel
+        paymentMethod={methodLabel}
+        status={status || code || 'PENDING'}
+        desc={resultPanelDesc}
+        actionLabel="查看绑定结果"
+        onAction={() => { void handleQuery(); }}
+        disabled={isApiCalling}
+      />
+    );
+  }
+
   if (shouldDisplayRedirectUrl && activationRedirectUrl) {
     return (
       <div className="h-[632px] min-h-[632px] bg-white flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-500">
-        <BrowserBar url={mockReturnUrl || activationRedirectUrl} />
+        <BrowserBar url={activationRedirectUrl} />
         <div className="flex-1 bg-slate-50 relative overflow-hidden">
-          {mockReturnUrl ? (
-            <MockReturnPage
-              status={status || code || 'SUCCESS'}
-              orderNo={lastApiResponse?.data?.outTradeNo || lastApiResponse?.localOrderNo || 'ORDER_RETURNED'}
-              methodLabel={methodLabel}
-              businessLabel="MANDATE_API_BIND"
-            />
-          ) : (
-            <iframe
-              src={activationRedirectUrl}
-              onLoad={handleIframeLoad}
-              className="w-full h-full border-none"
-              title="PayerMax Mandate Binding"
-              allow="payment"
-              sandbox="allow-scripts allow-popups allow-same-origin allow-top-navigation"
-            />
-          )}
+          <iframe
+            src={activationRedirectUrl}
+            onLoad={handleIframeLoad}
+            className="w-full h-full border-none"
+            title="PayerMax Mandate Binding"
+            allow="payment"
+            sandbox="allow-scripts allow-popups allow-same-origin allow-top-navigation"
+          />
         </div>
-        <div className="p-3 bg-white border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => { void handleQuery(); }}
-            disabled={isApiCalling}
-            className="w-full h-11 rounded-2xl bg-blue-600 text-white font-black flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
-          >
-            {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-            <span>{mockReturnUrl ? 'Continue to binding result' : 'Authorization completed, query result'}</span>
-            <span className="hidden">
-            授权完成后，查询绑定结果
-            </span>
-          </button>
-        </div>
+        {!shouldHideRedirectAction && (
+          <div className="p-3 bg-white border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => { void handleQuery(); }}
+              disabled={isApiCalling}
+              className="w-full h-11 rounded-2xl bg-blue-600 text-white font-black flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
+            >
+              {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              <span>{mockReturnUrl ? 'Continue to binding result' : 'Authorization completed, query result'}</span>
+              <span className="hidden">
+              授权完成后，查询绑定结果
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -119,10 +142,9 @@ export const StepMandateOrder: React.FC = () => {
     return (
       <OrderResultPanel
         paymentMethod={methodLabel}
-        status={status || code || 'UNKNOWN'}
-        desc={integrationMode === 'api'
-          ? '前端 JS 已使用 Direct_Payment 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
-          : '前端 JS 已使用 paymentToken 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'}
+        status={status || code || 'PENDING'}
+        desc={resultPanelDesc}
+        actionLabel="查看绑定结果"
         onAction={() => { void handleQuery(); }}
         disabled={isApiCalling}
       />
@@ -140,14 +162,21 @@ export const StepMandateOrder: React.FC = () => {
           前端 JS 将使用上一阶段收集的支付要素调用 orderAndPay。左侧代码块会展示真实请求和 PayerMax 响应。
         </p>
 
-        <div className="mt-4 grid grid-cols-1 gap-2">
-          <Info label="integration" value={integrationMode} />
-          <Info label="paymentMethodType" value={methodLabel} />
-          <Info label="mitType" value={amounts.mitType} />
-          <Info label="amount" value={`${amounts.currency} ${amounts.firstBindAmount}`} />
-          {isComponent && <Info label="paymentToken" value={componentPaymentToken || 'WAITING'} />}
-          {isComponent && <Info label="sessionKey" value={componentSessionData?.sessionKey || 'WAITING'} />}
-        </div>
+        {isComponent ? (
+          <div className="mt-4">
+            <Info label="paymentToken" value={componentPaymentToken || 'WAITING'} />
+            <p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-500">
+              将 paymentToken、sessionKey、subscriptionNo 用于后续 orderAndPay 激活订阅。
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            <Info label="integration" value={integrationMode} />
+            <Info label="paymentMethodType" value={methodLabel} />
+            <Info label="mitType" value={amounts.mitType} />
+            <Info label="amount" value={`${amounts.currency} ${amounts.firstBindAmount}`} />
+          </div>
+        )}
       </div>
 
       {isComponent && !canSubmit && (
@@ -198,4 +227,13 @@ function getOrderStatus(result: any): string | null {
     || result?.debug?.responseFromPayerMax?.data?.status
     || result?.status
     || null;
+}
+
+function parseExchangeResponse(responseBody?: string): any | null {
+  if (!responseBody) return null;
+  try {
+    return JSON.parse(responseBody);
+  } catch {
+    return null;
+  }
 }

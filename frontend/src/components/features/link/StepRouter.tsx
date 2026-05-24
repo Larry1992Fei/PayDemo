@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useProduct } from '@/contexts/ProductContext';
-import { ArrowRight, CheckCircle2, ExternalLink, Link2, Loader2, QrCode, SearchCheck } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ExternalLink, Link2, Loader2, QrCode, RotateCcw, SearchCheck } from 'lucide-react';
 
 export const LinkStepRouter: React.FC = () => {
   const { currentStep } = useProduct();
@@ -40,7 +40,7 @@ const LinkConfigStep: React.FC = () => {
         <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
           <p className="text-xs font-bold text-indigo-900 leading-relaxed">
             {isApi
-              ? '点击创建链接后，前端 JS 将调用 createPaybylink。左侧代码块展示真实请求体和 PayerMax 响应，下一步把 linkUrl 与 qrCodeUrl 交给用户完成支付。'
+              ? '点击创建链接后，请求创建链接接口，下一步把 linkUrl 与 qrCodeUrl 交给用户完成支付。'
               : '商户在 PayerMax 后台录入订单信息并生成链接，再把二维码或链接分发给用户。'}
           </p>
         </div>
@@ -63,23 +63,94 @@ const LinkConfigStep: React.FC = () => {
 
 const LinkPaymentStep: React.FC = () => {
   const { paymentLinkData, toNextStep, isApiCalling } = useProduct();
-  const [opened, setOpened] = useState(false);
+  const [paymentView, setPaymentView] = useState<'idle' | 'embedded' | 'external'>('idle');
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const linkUrl = paymentLinkData?.linkUrl || 'https://www.payermax.link/demo';
   const qrCodeUrl = paymentLinkData?.qrCodeUrl;
-  const canEmbed = opened && Boolean(linkUrl) && !linkUrl.includes('/demo');
 
-  if (canEmbed) {
+  React.useEffect(() => {
+    if (paymentView !== 'embedded' || iframeLoaded) return;
+
+    const timer = window.setTimeout(() => {
+      setPaymentView((current) => {
+        if (current !== 'embedded') return current;
+        window.open(linkUrl, '_blank', 'noopener,noreferrer');
+        return 'external';
+      });
+    }, 3500);
+
+    return () => window.clearTimeout(timer);
+  }, [iframeLoaded, linkUrl, paymentView]);
+
+  const openPaymentLink = () => {
+    setIframeLoaded(false);
+    setPaymentView('embedded');
+  };
+
+  const openPaymentLinkExternally = () => {
+    window.open(linkUrl, '_blank', 'noopener,noreferrer');
+    setPaymentView('external');
+  };
+
+  if (paymentView === 'embedded') {
     return (
-      <div className="h-full bg-white flex flex-col">
+      <div className="h-full bg-slate-50 flex flex-col">
         <BrowserBar url={linkUrl} />
-        <div className="flex-1 bg-white overflow-hidden">
+        <div className="flex-1 bg-white relative overflow-hidden">
+          {!iframeLoaded && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-8 text-center bg-slate-50">
+              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
+              <h2 className="text-lg font-black text-slate-900">正在打开支付链接</h2>
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
+                先尝试在仿真手机内展示，若页面无法加载会自动使用新窗口打开。
+              </p>
+            </div>
+          )}
           <iframe
             src={linkUrl}
+            onLoad={() => setIframeLoaded(true)}
             className="w-full h-full border-none"
-            title="PayerMax Pay by Link"
+            title="PayerMax Payment Link"
             allow="payment"
-            sandbox="allow-scripts allow-popups allow-same-origin allow-forms"
+            sandbox="allow-scripts allow-popups allow-same-origin allow-top-navigation"
           />
+        </div>
+        <div className="p-4 bg-white border-t border-slate-100 space-y-2">
+          <button
+            type="button"
+            onClick={openPaymentLinkExternally}
+            className="w-full h-11 rounded-2xl bg-white border border-slate-200 text-slate-700 text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          >
+            新窗口打开
+            <ExternalLink className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => { void toNextStep(); }}
+            disabled={isApiCalling}
+            className="w-full h-11 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
+          >
+            {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            支付完成后查询链接状态
+            <SearchCheck className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (paymentView === 'external') {
+    return (
+      <div className="h-full bg-slate-50 flex flex-col">
+        <BrowserBar url={linkUrl} />
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-5">
+            <ExternalLink className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-black text-slate-900">支付链接已打开</h2>
+          <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
+            真实支付页已在浏览器新窗口打开。用户完成支付后，返回本演示查询链接状态。
+          </p>
         </div>
         <LinkQueryButton onClick={() => { void toNextStep(); }} loading={isApiCalling} />
       </div>
@@ -124,7 +195,7 @@ const LinkPaymentStep: React.FC = () => {
 
       <div className="p-5 bg-white border-t border-slate-100 space-y-2">
         <button
-          onClick={() => setOpened(true)}
+          onClick={openPaymentLink}
           className="w-full h-12 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           打开链接去支付
@@ -136,7 +207,7 @@ const LinkPaymentStep: React.FC = () => {
 };
 
 const LinkResultStep: React.FC = () => {
-  const { lastApiResponse, paymentLinkData, queryPaymentLink, isApiCalling, linkMode } = useProduct();
+  const { lastApiResponse, paymentLinkData, isApiCalling, linkMode, resetFlow } = useProduct();
   const data = lastApiResponse?.data || {};
   const linkStatus = data.linkStatus || paymentLinkData?.linkStatus || 'ACTIVE';
   const payInfo = Array.isArray(data.payByLinkInfo) ? data.payByLinkInfo[0] : null;
@@ -167,12 +238,12 @@ const LinkResultStep: React.FC = () => {
       </div>
 
       <button
-        onClick={() => { void queryPaymentLink('l3'); }}
+        onClick={() => resetFlow()}
         disabled={isApiCalling || linkMode === 'dashboard'}
         className="mt-auto w-full h-12 rounded-2xl bg-white text-emerald-600 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-60"
       >
-        {isApiCalling ? '查询中...' : '重新查询链接详情'}
-        <SearchCheck className="w-4 h-4" />
+        重新生成支付链接
+        <RotateCcw className="w-4 h-4" />
       </button>
     </div>
   );

@@ -5,10 +5,10 @@ import type { LinkMode } from '@/types/link';
 import { getStandardSteps } from '@/config/standardSteps';
 import { buildStandardOrderRequest } from '@/config/standardRequestBuilder';
 import { postPayerMaxDemoApi } from '@/services/payermaxClient';
-import { showUiError } from '@/lib/uiFeedback';
+import { showUiError, showUiWarning } from '@/lib/uiFeedback';
 import { createDemoUserId } from '@/lib/demoIds';
 
-// 鈹€鈹€ 绫诲瀷瀹氫箟 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+// 类型定义
 export type ProductMode = 'STANDARD' | 'SUBSCRIPTION' | 'PAYMENT_LINK' | 'DISBURSEMENT';
 
 export const MODES_DESC: Record<ProductMode, string> = {
@@ -93,6 +93,8 @@ export type PaymentLinkData = {
 };
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
+const isConcretePaymentMethod = (method: unknown): method is Exclude<PaymentMethod, ''> =>
+  method === 'card' || method === 'applepay' || method === 'googlepay' || method === 'apm';
 
 type PaymentResultAction = 'redirect' | 'success' | 'pending' | 'failed';
 
@@ -133,7 +135,7 @@ const normalizePaymentResult = (result: any): NormalizedPaymentResult => {
 };
 
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 鈹€鈹€ 鎸佷箙鍖栦笌鍒濆鍖?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 持久化与初始化
   const storedProductMode = sessionStorage.getItem('productMode') as ProductMode;
   const storedIntegrationMode = sessionStorage.getItem('integrationMode') as PaymentIntegrationMode;
   const storedCashierMode = sessionStorage.getItem('cashierMode') as 'ALL' | 'SPECIFIC';
@@ -145,7 +147,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [cashierMode, setCashierModeState] = useState<'ALL' | 'SPECIFIC'>(storedCashierMode || 'ALL');
   const [paymentMethod, setPaymentMethodState] = useState<PaymentMethod>(storedPaymentMethod || 'card');
   const [cashierPaymentMethod, setCashierPaymentMethod] = useState<PaymentMethod>('card');
-  const [linkMode, setLinkMode] = useState<LinkMode>('dashboard');
+  const [linkMode, setLinkMode] = useState<LinkMode>('api');
   const [currentStep, setCurrentStep] = useState(storedCurrentStep || 's1');
   const [redirectUrl, setRedirectUrl] = useState<string | null>(sessionStorage.getItem('redirectUrl'));
   const [lastApiResponse, setLastApiResponse] = useState<any>(JSON.parse(sessionStorage.getItem('lastApiResponse') || 'null'));
@@ -175,7 +177,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const subject = "diamond 700";
   const [userId, setUserId] = useState(() => sessionStorage.getItem('standard.userId') || createDemoUserId());
 
-  // 鈹€鈹€ 鎸佷箙鍖栧悓姝?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 持久化同步
   useEffect(() => {
     sessionStorage.setItem('productMode', productMode);
     sessionStorage.setItem('integrationMode', integrationMode);
@@ -192,7 +194,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     sessionStorage.setItem('standard.userId', userId);
   }, [productMode, integrationMode, cashierMode, currentStep, paymentMethod, redirectUrl, lastApiResponse, stepApiExchanges, paymentLinkData, userId]);
 
-  // 鈹€鈹€ 鎬ц兘浼樺寲锛氱粍浠舵ā寮忓悗鍙伴鍔犺浇 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 组件模式后台预加载
   useEffect(() => {
     if (integrationMode === 'component' && currentStep === 's1' && !sessionData && !isApiCalling) {
       console.log('🚀 [Background] Pre-fetching PayerMax Session...');
@@ -206,7 +208,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [productMode, currentStep]);
 
-  // 鈹€鈹€ 娴佺▼瀹氫箟 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 流程定义
   const steps = useMemo(() => {
     if (productMode === 'STANDARD') {
       return getStandardSteps(integrationMode, cashierMode);
@@ -288,7 +290,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setStepApiExchanges(prev => ({ ...prev, [stepId]: exchange }));
   };
 
-  // 鈹€鈹€ 娴佺▼寮曟搸鏍稿績 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 流程引擎核心
   const toNextStep = async (selectedPaymentMethod?: PaymentMethod) => {
     const currentIndex = steps.findIndex(s => s.id === currentStep);
     if (currentIndex >= steps.length - 1) return;
@@ -310,7 +312,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCurrentStep(nextStepId);
       }
     } else if (productMode === 'STANDARD') {
-      // 1. 鏀堕摱鍙版ā寮忛€昏緫
+      // 1. 收银台模式逻辑
       if (integrationMode === 'cashier') {
         if (currentStep === 's2' && nextStepId === 's3') {
           setCurrentStep(nextStepId);
@@ -318,6 +320,10 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
           await callOrderAndPay(nextStepId);
         } else if (cashierMode === 'SPECIFIC') {
           if (currentStep === 's1') {
+            if (!isConcretePaymentMethod(selectedPaymentMethod)) {
+              showUiWarning('请先在右侧仿真手机点击 Buy Now，并在自建收银台内选择支付方式。');
+              return;
+            }
             await callOrderAndPay(nextStepId, selectedPaymentMethod);
           } else {
             setCurrentStep(nextStepId);
@@ -326,16 +332,24 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setCurrentStep(nextStepId);
         }
       } 
-      // 2. API 妯″紡閫昏緫锛歵1 鍐呴儴瀹屾垚鑷缓鏀堕摱鍙伴€夋嫨锛岄€夊畬鍚庣洿鎺ヨ皟 orderAndPay 杩涘叆 s2
+      // 2. API 模式逻辑：s1 内完成自建收银台选择，选完后直接调用 orderAndPay 进入 s2
       else if (integrationMode === 'api') {
         if (currentStep === 's1') {
-          await callOrderAndPay(nextStepId, selectedPaymentMethod || paymentMethod);
+          if (!isConcretePaymentMethod(selectedPaymentMethod)) {
+            showUiWarning('请先在右侧仿真手机点击 Buy Now，并在自建收银台内选择支付方式。');
+            return;
+          }
+          await callOrderAndPay(nextStepId, selectedPaymentMethod);
         } else {
           setCurrentStep(nextStepId);
         }
       }
       // 3. 组件模式逻辑
       else if (integrationMode === 'component') {
+        if (currentStep === 's2' && !paymentToken) {
+          showUiWarning('请先在右侧仿真手机内选择支付方式并完成组件授权，获取 paymentToken 后再执行下一步。');
+          return;
+        }
         setCurrentStep(nextStepId);
       }
     } else {
@@ -504,6 +518,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const submitComponentOrder = async (stepId = currentStep) => {
     if (!paymentToken) {
       console.warn('paymentToken 缺失，无法下单');
+      showUiWarning('请先在右侧仿真手机内完成前置组件授权，获取 paymentToken 后再执行 orderAndPay。');
       return;
     }
 
@@ -551,6 +566,10 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsApiCalling(true);
     try {
       const effectivePaymentMethod = overridePaymentMethod || paymentMethod;
+      if ((integrationMode !== 'cashier' || cashierMode === 'SPECIFIC') && !isConcretePaymentMethod(effectivePaymentMethod)) {
+        showUiWarning('请先在右侧仿真手机内选择支付方式。');
+        return;
+      }
       if (overridePaymentMethod) {
         setPaymentMethodState(overridePaymentMethod);
         setCashierPaymentMethod(overridePaymentMethod);
@@ -617,7 +636,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // 鈹€鈹€ 鎶ユ枃妯℃澘鏍稿績 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // 报文模板核心
   return (
     <ProductContext.Provider value={{
       productMode, setProductMode,

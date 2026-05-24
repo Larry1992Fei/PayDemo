@@ -8,6 +8,7 @@ import { StepRouter as SubscriptionStepRouter } from '@/components/features/subs
 import { StandardStepRouter } from '@/components/features/standard/StepRouter';
 import { LinkStepRouter } from '@/components/features/link/StepRouter';
 import { calculateActivationAmount, normalizeApmSubscriptionParams, normalizeFullCashierSubscriptionParams } from '@/types/subscription';
+import { getErrorMessage, showUiWarning } from '@/lib/uiFeedback';
 import { ArrowRight, CheckCircle2, ClipboardList, Link2, QrCode, Send, SearchCheck } from 'lucide-react';
 
 export const Playzone: React.FC = () => {
@@ -24,7 +25,7 @@ const SubscriptionPlayzone: React.FC = () => {
     steps, currentStepIndex, currentStep, isFinalStep,
     triggerFlash, goNextWithApi, goPrev,
     stepApiExchanges,
-    activationRedirectUrl,
+    activationRedirectUrl, componentPaymentToken, mandateTokenId, mandateBindOrderNo,
     subMode, integrationMode, paymentMethod, subscriptionType, formParams, subscriptionUserId,
   } = useSubscription();
 
@@ -39,10 +40,10 @@ const SubscriptionPlayzone: React.FC = () => {
     : (paymentMethod === 'apm' ? 'KR' : 'ID');
   const frontendParamSections: CodeSection[] | undefined = !currentExchange && currentStepIndex === 0
     ? [{
-        title: 'Frontend Parameters · Browser JS',
+        title: 'Frontend Parameters',
         endpoint: { method: 'POST', url: subMode === 'payermax' ? '/api/subscriptionCreate' : '/api/orderAndPay' },
         requestBody: JSON.stringify({
-          note: '前端第一步收集商户/用户选择的业务参数，浏览器 JS 会补齐公共字段、签名和必要支付数据后直连 PayerMax。',
+          note: '前端第一步收集用户选择的业务参数，用于后续请求PayerMax接口',
           product: 'SUBSCRIPTION',
           subMode,
           integrationMode,
@@ -70,6 +71,34 @@ const SubscriptionPlayzone: React.FC = () => {
         }, null, 2),
       }]
     : undefined;
+  const handleSubscriptionExecute = async () => {
+    if (integrationMode === 'component') {
+      if ((currentStep.id === 'pm-2' || currentStep.id === 'pm-component' || currentStep.id === 'm-order' || currentStep.id === 'np-order') && !componentPaymentToken) {
+        showUiWarning('请先在右侧仿真手机内完成前置组件授权，获取 paymentToken 后再执行请求。');
+        return;
+      }
+      if ((currentStep.id === 'm-component' || currentStep.id === 'np-component') && !componentPaymentToken) {
+        showUiWarning('请先在右侧仿真手机内选择支付方式并获取 paymentToken。paymentToken 只能由组件授权后返回。');
+        return;
+      }
+    }
+
+    if ((currentStep.id === 'm-bound' || currentStep.id === 'np-bound') && !mandateBindOrderNo) {
+      showUiWarning('请先完成首次绑定下单，拿到真实订单号后再查询绑定结果。');
+      return;
+    }
+
+    if ((currentStep.id === 'm-deduct' || currentStep.id === 'np-deduct') && !mandateTokenId) {
+      showUiWarning('请先完成首次绑定并通过 orderQuery 获取 paymentTokenID，再发起后续扣款。');
+      return;
+    }
+
+    try {
+      await goNextWithApi();
+    } catch (error) {
+      showUiWarning(getErrorMessage(error));
+    }
+  };
 
   return (
     <main className="flex-1 h-full overflow-hidden bg-slate-50 relative z-10 flex flex-col">
@@ -118,7 +147,7 @@ const SubscriptionPlayzone: React.FC = () => {
                   sections={currentExchange?.sections || frontendParamSections}
                   filename={`${currentStep?.id ?? 'step'}.json`}
                   flashTrigger={triggerFlash}
-                  onExecute={() => { void goNextWithApi(); }}
+                  onExecute={() => { void handleSubscriptionExecute(); }}
                   isExecuteDisabled={isFinalStep}
                 />
               </div>
@@ -272,7 +301,7 @@ const DefaultPlayzone: React.FC = () => {
   const {
     productMode, integrationMode, cashierMode, paymentMethod, cashierPaymentMethod,
     steps, currentStep, toNextStep, goPrev, triggerFlash, stepApiExchanges,
-    amount, currency, country, userId, linkMode,
+    amount, currency, country, userId, linkMode, paymentToken, submitComponentOrder,
   } = useProduct();
 
   if (productMode === 'PAYMENT_LINK' && linkMode === 'dashboard') {
@@ -285,14 +314,14 @@ const DefaultPlayzone: React.FC = () => {
     || (productMode === 'PAYMENT_LINK' && currentStep === 'l2' ? stepApiExchanges.l1 : undefined);
   const frontendParamSections: CodeSection[] | undefined = !currentExchange && currentStep === steps[0]?.id
     ? [{
-        title: 'Frontend Parameters · Browser JS',
+        title: 'Frontend Parameters',
         endpoint: {
           method: 'POST',
           url: productMode === 'PAYMENT_LINK' ? '/api/createPaybylink' : '/api/orderAndPay',
         },
         requestBody: JSON.stringify(productMode === 'PAYMENT_LINK'
           ? {
-              note: '前端第一步收集支付链接商品参数，浏览器 JS 会生成 merchantLinkId、签名并请求 PayerMax createPaybylink。',
+              note: '前端第一步收集支付链接商品参数，用户或许创建链接使用',
               product: 'PAYMENT_LINK',
               linkMode,
               goodsName: 'PayerMax Smart Watch Pro',
@@ -305,7 +334,7 @@ const DefaultPlayzone: React.FC = () => {
               nextPayerMaxAction: 'createPaybylink 返回 linkUrl 与 qrCodeUrl',
             }
           : {
-              note: '前端第一步收集商品、用户和支付选择，浏览器 JS 会补齐公共字段、签名和必要支付数据后直连 PayerMax。',
+              note: '前端第一步收集商品、用户和支付选择，用于后续请求PayerMax接口',
               product: 'STANDARD',
               integrationMode,
               cashierMode,
@@ -323,8 +352,37 @@ const DefaultPlayzone: React.FC = () => {
             }, null, 2),
       }]
     : undefined;
-  const shouldDisableExecute =
-    isFinalStep || (productMode === 'STANDARD' && integrationMode === 'api' && currentStep === 's1');
+  const shouldDisableExecute = isFinalStep;
+  const handleDefaultExecute = async () => {
+    if (productMode === 'STANDARD') {
+      const isSelfHostedFirstStep = currentStep === 's1'
+        && (integrationMode === 'api' || (integrationMode === 'cashier' && cashierMode === 'SPECIFIC'));
+      if (isSelfHostedFirstStep) {
+        showUiWarning('请先在右侧仿真手机点击 Buy Now，并在自建收银台内选择支付方式。');
+        return;
+      }
+
+      if (integrationMode === 'component' && currentStep === 's2' && !paymentToken) {
+        showUiWarning('请先在右侧仿真手机内选择支付方式并完成组件授权，获取 paymentToken 后再执行下一步。');
+        return;
+      }
+
+      if (integrationMode === 'component' && currentStep === 's3') {
+        if (!paymentToken) {
+          showUiWarning('请先回到右侧仿真手机自建收银台获取 paymentToken，再执行 orderAndPay。');
+          return;
+        }
+        await submitComponentOrder('s3');
+        return;
+      }
+    }
+
+    if (productMode === 'PAYMENT_LINK' && currentStep === 'l2') {
+      showUiWarning('请确认用户已在右侧仿真手机打开链接并完成支付后，再查询链接状态。');
+    }
+
+    await toNextStep();
+  };
 
   return (
     <main className="flex-1 h-full overflow-hidden bg-slate-50 relative z-10 flex flex-col">
@@ -368,7 +426,7 @@ const DefaultPlayzone: React.FC = () => {
                   sections={currentExchange?.sections || frontendParamSections}
                   filename={`system_${currentStep}.json`}
                   flashTrigger={triggerFlash}
-                  onExecute={toNextStep}
+                  onExecute={() => { void handleDefaultExecute(); }}
                   isExecuteDisabled={shouldDisableExecute}
                 />
               </div>
