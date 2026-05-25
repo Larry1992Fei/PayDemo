@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useProduct } from '@/contexts/ProductContext';
 import { Star, ChevronRight, CreditCard, Lock, CheckCircle2, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { STANDARD_CARD_DETAIL } from '@/config/demoPaymentDetails';
 
 // ─── 支付方式图标（SVG，非 Emoji） ────────────────────────────────────────────
 const CardIcon = () => (
@@ -118,14 +119,16 @@ const ApiModeCashier: React.FC<{ amount: string; currency: string }> = ({ amount
                 <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Card Number</label>
                 <div className="h-10 bg-slate-50 rounded-xl border border-slate-200 px-3 flex items-center gap-2">
                   <CreditCard className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                  <span className="text-[13px] font-mono font-semibold text-slate-700 tracking-widest">4444 3333 2222 1111</span>
+                  <span className="text-[13px] font-mono font-semibold text-slate-700 tracking-widest">{STANDARD_CARD_DETAIL.displayNumber}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Expiry Date</label>
                   <div className="h-10 bg-slate-50 rounded-xl border border-slate-200 px-3 flex items-center">
-                    <span className="text-[13px] font-mono font-semibold text-slate-700">03 / 30</span>
+                    <span className="text-[13px] font-mono font-semibold text-slate-700">
+                      {STANDARD_CARD_DETAIL.cardExpirationMonth} / {STANDARD_CARD_DETAIL.cardExpirationYear}
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -140,7 +143,7 @@ const ApiModeCashier: React.FC<{ amount: string; currency: string }> = ({ amount
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cardholder Name</label>
                 <div className="h-10 bg-slate-50 rounded-xl border border-slate-200 px-3 flex items-center">
-                  <span className="text-[13px] font-semibold text-slate-700">James Smith</span>
+                  <span className="text-[13px] font-semibold text-slate-700">{STANDARD_CARD_DETAIL.cardHolderFullName}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 pt-0.5">

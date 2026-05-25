@@ -1,4 +1,5 @@
 import { DEMO_FRONT_CALLBACK_URL, DEMO_MIT_MANAGEMENT_URL, DEMO_NOTIFY_URL } from '@/config/payermaxDemoUrls';
+import { STANDARD_CARD_DETAIL } from '@/config/demoPaymentDetails';
 import { buildFirstPeriodStartDate, buildSubscriptionPlan, normalizeApmSubscriptionParams, normalizeFullCashierSubscriptionParams } from '@/types/subscription';
 import { createDemoUserId } from '@/lib/demoIds';
 
@@ -105,11 +106,11 @@ function buildStandardPaymentDetail(paymentMethod?: string, requestPaymentDetail
   };
   if (resolvedMethod === 'card') {
     detail.cardInfo = requestPaymentDetail.cardInfo || {
-      cardIdentifierNo: '4001563861135570',
-      cardHolderFullName: 'James Smith',
-      cardExpirationMonth: '03',
-      cardExpirationYear: '30',
-      cvv: '123',
+      cardIdentifierNo: STANDARD_CARD_DETAIL.cardIdentifierNo,
+      cardHolderFullName: STANDARD_CARD_DETAIL.cardHolderFullName,
+      cardExpirationMonth: STANDARD_CARD_DETAIL.cardExpirationMonth,
+      cardExpirationYear: STANDARD_CARD_DETAIL.cardExpirationYear,
+      cvv: STANDARD_CARD_DETAIL.cvv,
     };
   } else if (resolvedMethod === 'applepay') {
     detail.applePayPaymentData = requestPaymentDetail.applePayPaymentData || {
@@ -167,7 +168,13 @@ function buildSubscriptionPaymentDetail(paymentMethod?: string, integrationMode?
   if (resolvedIntegration !== 'api') return detail;
   detail.buyerInfo = detail.buyerInfo || getBuyerInfo();
   if (resolvedMethod === 'card') {
-    detail.cardInfo = { cardIdentifierNo: '4001563861135570', cardHolderFullName: 'James Smith', cardExpirationMonth: '03', cardExpirationYear: '30', cvv: '123' };
+    detail.cardInfo = {
+      cardIdentifierNo: STANDARD_CARD_DETAIL.cardIdentifierNo,
+      cardHolderFullName: STANDARD_CARD_DETAIL.cardHolderFullName,
+      cardExpirationMonth: STANDARD_CARD_DETAIL.cardExpirationMonth,
+      cardExpirationYear: STANDARD_CARD_DETAIL.cardExpirationYear,
+      cvv: STANDARD_CARD_DETAIL.cvv,
+    };
   } else if (resolvedMethod === 'applepay') {
     detail.applePayPaymentData = { applicationExpirationDate: '2312', applicationPrimaryAccountNumber: '4111111111111111', currencyCode: 'USD', deviceManufacturerIdentifier: 'A1B2C3D4', paymentDataType: '3DSecure', transactionAmount: '100.00', paymentData: { onlinePaymentCryptogram: 'Aa0KZXFURkhF...', eciIndicator: '07' }, network: 'VISA', type: 'credit', displayName: 'Visa 0492' };
   } else if (resolvedMethod === 'googlepay') {

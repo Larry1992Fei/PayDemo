@@ -2,6 +2,7 @@ import React from 'react';
 import { useProduct } from '@/contexts/ProductContext';
 import { CreditCard, ShieldCheck, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { STANDARD_CARD_DETAIL } from '@/config/demoPaymentDetails';
 
 export const StepApiPayment: React.FC = () => {
   const { amount, currency, paymentMethod, toNextStep } = useProduct();
@@ -36,14 +37,14 @@ export const StepApiPayment: React.FC = () => {
                 <label className="text-[10px] font-bold text-slate-400 uppercase">Card Number</label>
                 <div className="h-11 bg-slate-50 rounded-xl border border-slate-100 px-3 flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-800 font-medium tracking-widest">4444 3300 0000 1111</span>
+                  <span className="text-sm text-slate-800 font-medium tracking-widest">{STANDARD_CARD_DETAIL.displayNumber}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase">Expiry</label>
                   <div className="h-11 bg-slate-50 rounded-xl border border-slate-100 px-3 flex items-center">
-                    <span className="text-sm text-slate-800 font-medium">03 / 30</span>
+                    <span className="text-sm text-slate-800 font-medium">{STANDARD_CARD_DETAIL.cardExpirationMonth} / {STANDARD_CARD_DETAIL.cardExpirationYear}</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
