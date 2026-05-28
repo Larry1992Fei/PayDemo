@@ -11,6 +11,8 @@ import { calculateActivationAmount, normalizeApmSubscriptionParams, normalizeFul
 import { getErrorMessage, showUiWarning } from '@/lib/uiFeedback';
 import { ArrowRight, CheckCircle2, ClipboardList, Link2, QrCode, Send, SearchCheck } from 'lucide-react';
 
+const SHOW_CODE_EXECUTE_BUTTONS = false;
+
 export const Playzone: React.FC = () => {
   const { productMode } = useProduct();
   const isSubscription = productMode === 'SUBSCRIPTION';
@@ -147,7 +149,7 @@ const SubscriptionPlayzone: React.FC = () => {
                   sections={currentExchange?.sections || frontendParamSections}
                   filename={`${currentStep?.id ?? 'step'}.json`}
                   flashTrigger={triggerFlash}
-                  onExecute={() => { void handleSubscriptionExecute(); }}
+                  onExecute={SHOW_CODE_EXECUTE_BUTTONS ? () => { void handleSubscriptionExecute(); } : undefined}
                   isExecuteDisabled={isFinalStep}
                 />
               </div>
@@ -426,7 +428,7 @@ const DefaultPlayzone: React.FC = () => {
                   sections={currentExchange?.sections || frontendParamSections}
                   filename={`system_${currentStep}.json`}
                   flashTrigger={triggerFlash}
-                  onExecute={() => { void handleDefaultExecute(); }}
+                  onExecute={SHOW_CODE_EXECUTE_BUTTONS ? () => { void handleDefaultExecute(); } : undefined}
                   isExecuteDisabled={shouldDisableExecute}
                 />
               </div>
