@@ -14,6 +14,7 @@ import { StepDeduct } from './StepDeduct';
 import { StepComplete } from './StepComplete';
 import { StepMandateBound } from './StepMandateBound';
 import { StepMandateOrder } from './StepMandateOrder';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * 通过 stepId 前缀匹配路由规则：
@@ -48,12 +49,13 @@ const STEP_MAP: Record<string, React.FC> = {
 
 export const StepRouter: React.FC = () => {
   const { currentStep } = useSubscription();
+  const { t } = useLanguage();
   const StepComponent = STEP_MAP[currentStep?.id];
 
   if (!StepComponent) {
     return (
       <div className="flex items-center justify-center h-40 text-slate-400 text-sm">
-        未知步骤 ID: {currentStep?.id}
+        {t('subscription.router.unknown')}: {currentStep?.id}
       </div>
     );
   }

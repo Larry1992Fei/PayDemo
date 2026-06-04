@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useProduct } from '@/contexts/ProductContext';
 import { ArrowRight, CheckCircle2, ExternalLink, Link2, Loader2, QrCode, RotateCcw, SearchCheck } from 'lucide-react';
+import { useProduct } from '@/contexts/ProductContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const LinkStepRouter: React.FC = () => {
   const { currentStep } = useProduct();
@@ -14,6 +15,7 @@ export const LinkStepRouter: React.FC = () => {
 
 const LinkConfigStep: React.FC = () => {
   const { linkMode, toNextStep, isApiCalling } = useProduct();
+  const { t } = useLanguage();
   const isApi = linkMode === 'api';
 
   return (
@@ -21,7 +23,9 @@ const LinkConfigStep: React.FC = () => {
       <div className="bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pay by Link</p>
-          <h2 className="text-lg font-black text-slate-900">{isApi ? '商品参数 / 创建链接' : '商户后台生成链接'}</h2>
+          <h2 className="text-lg font-black text-slate-900">
+            {isApi ? t('link.config.apiTitle') : t('link.config.dashboardTitle')}
+          </h2>
         </div>
         <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center">
           <Link2 className="w-5 h-5" />
@@ -30,18 +34,16 @@ const LinkConfigStep: React.FC = () => {
 
       <div className="flex-1 p-5 space-y-4">
         <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
-          <Info label="商品名称" value="PayerMax Smart Watch Pro" />
-          <Info label="链接类型" value="ONETIME" />
-          <Info label="收单国家" value="ID" />
-          <Info label="订单金额" value="IDR 40000" />
-          <Info label="有效期" value="86400 秒" />
+          <Info label={t('link.product')} value="PayerMax Smart Watch Pro" />
+          <Info label={t('link.type')} value="ONETIME" />
+          <Info label={t('link.country')} value="ID" />
+          <Info label={t('link.amount')} value="IDR 40000" />
+          <Info label={t('link.expires')} value={`86400 ${t('link.seconds')}`} />
         </div>
 
         <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
           <p className="text-xs font-bold text-indigo-900 leading-relaxed">
-            {isApi
-              ? '点击创建链接后，请求创建链接接口，下一步把 linkUrl 与 qrCodeUrl 交给用户完成支付。'
-              : '商户在 PayerMax 后台录入订单信息并生成链接，再把二维码或链接分发给用户。'}
+            {isApi ? t('link.apiHint') : t('link.dashboardHint')}
           </p>
         </div>
       </div>
@@ -53,7 +55,7 @@ const LinkConfigStep: React.FC = () => {
           className="w-full h-12 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
         >
           {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {isApi ? '创建支付链接' : '模拟生成链接'}
+          {isApi ? t('link.create') : t('link.generate')}
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
@@ -63,6 +65,7 @@ const LinkConfigStep: React.FC = () => {
 
 const LinkPaymentStep: React.FC = () => {
   const { paymentLinkData, toNextStep, isApiCalling } = useProduct();
+  const { t } = useLanguage();
   const [paymentView, setPaymentView] = useState<'idle' | 'embedded' | 'external'>('idle');
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const linkUrl = paymentLinkData?.linkUrl || 'https://www.payermax.link/demo';
@@ -100,9 +103,9 @@ const LinkPaymentStep: React.FC = () => {
           {!iframeLoaded && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-8 text-center bg-slate-50">
               <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
-              <h2 className="text-lg font-black text-slate-900">正在打开支付链接</h2>
+              <h2 className="text-lg font-black text-slate-900">{t('link.opening')}</h2>
               <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
-                先尝试在仿真手机内展示，若页面无法加载会自动使用新窗口打开。
+                {t('link.openingHint')}
               </p>
             </div>
           )}
@@ -121,7 +124,7 @@ const LinkPaymentStep: React.FC = () => {
             onClick={openPaymentLinkExternally}
             className="w-full h-11 rounded-2xl bg-white border border-slate-200 text-slate-700 text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
           >
-            新窗口打开
+            {t('link.openNewWindow')}
             <ExternalLink className="w-4 h-4" />
           </button>
           <button
@@ -131,7 +134,7 @@ const LinkPaymentStep: React.FC = () => {
             className="w-full h-11 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
           >
             {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            支付完成后查询链接状态
+            {t('link.queryAfterPay')}
             <SearchCheck className="w-4 h-4" />
           </button>
         </div>
@@ -147,9 +150,9 @@ const LinkPaymentStep: React.FC = () => {
           <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-5">
             <ExternalLink className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-black text-slate-900">支付链接已打开</h2>
+          <h2 className="text-xl font-black text-slate-900">{t('link.opened')}</h2>
           <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
-            真实支付页已在浏览器新窗口打开。用户完成支付后，返回本演示查询链接状态。
+            {t('link.openedHint')}
           </p>
         </div>
         <LinkQueryButton onClick={() => { void toNextStep(); }} loading={isApiCalling} />
@@ -162,7 +165,7 @@ const LinkPaymentStep: React.FC = () => {
       <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">User Payment</p>
-          <h2 className="text-lg font-black text-slate-900">扫码或打开链接支付</h2>
+          <h2 className="text-lg font-black text-slate-900">{t('link.userPaymentTitle')}</h2>
         </div>
         <QrCode className="w-8 h-8 text-indigo-600" />
       </div>
@@ -185,9 +188,9 @@ const LinkPaymentStep: React.FC = () => {
         <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 flex gap-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-black text-emerald-900">createPaybylink 已返回</p>
+            <p className="text-xs font-black text-emerald-900">{t('link.returned')}</p>
             <p className="text-[11px] font-semibold text-emerald-700 leading-relaxed mt-1">
-              商户可将二维码或链接分发给用户。点击下方按钮后，在本仿真手机内打开 PayerMax 链接支付页。
+              {t('link.returnedHint')}
             </p>
           </div>
         </div>
@@ -198,7 +201,7 @@ const LinkPaymentStep: React.FC = () => {
           onClick={openPaymentLink}
           className="w-full h-12 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
-          打开链接去支付
+          {t('link.openPayment')}
           <ExternalLink className="w-4 h-4" />
         </button>
       </div>
@@ -208,6 +211,7 @@ const LinkPaymentStep: React.FC = () => {
 
 const LinkResultStep: React.FC = () => {
   const { lastApiResponse, paymentLinkData, isApiCalling, linkMode, resetFlow } = useProduct();
+  const { t } = useLanguage();
   const data = lastApiResponse?.data || {};
   const linkStatus = data.linkStatus || paymentLinkData?.linkStatus || 'ACTIVE';
   const payInfo = Array.isArray(data.payByLinkInfo) ? data.payByLinkInfo[0] : null;
@@ -219,8 +223,8 @@ const LinkResultStep: React.FC = () => {
         <SearchCheck className="w-8 h-8" />
       </div>
       <div>
-        <h2 className="text-2xl font-black">链接结果查询</h2>
-        <p className="text-xs font-semibold text-white/85 mt-1">通过 queryPaybylink 查看链接状态和支付信息。</p>
+        <h2 className="text-2xl font-black">{t('link.resultTitle')}</h2>
+        <p className="text-xs font-semibold text-white/85 mt-1">{t('link.resultHint')}</p>
       </div>
 
       <div className="w-full rounded-2xl bg-white/15 border border-white/20 p-4 text-left space-y-3">
@@ -233,7 +237,7 @@ const LinkResultStep: React.FC = () => {
       <div className="w-full rounded-2xl bg-white/10 border border-white/15 p-3 text-left">
         <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Merchant Notes</p>
         <p className="text-xs font-semibold leading-relaxed mt-2">
-          生产环境中，支付结果应优先以异步通知验签入账；查询接口用于补偿确认和商户后台展示。
+          {t('link.merchantNotes')}
         </p>
       </div>
 
@@ -242,7 +246,7 @@ const LinkResultStep: React.FC = () => {
         disabled={isApiCalling || linkMode === 'dashboard'}
         className="mt-auto w-full h-12 rounded-2xl bg-white text-emerald-600 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-60"
       >
-        重新生成支付链接
+        {t('link.createNew')}
         <RotateCcw className="w-4 h-4" />
       </button>
     </div>
@@ -260,19 +264,23 @@ const BrowserBar: React.FC<{ url: string }> = ({ url }) => (
   </div>
 );
 
-const LinkQueryButton: React.FC<{ onClick: () => void; loading?: boolean }> = ({ onClick, loading }) => (
-  <div className="p-5 bg-white border-t border-slate-100">
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className="w-full h-12 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
-    >
-      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-      支付完成后查询链接状态
-      <SearchCheck className="w-4 h-4" />
-    </button>
-  </div>
-);
+const LinkQueryButton: React.FC<{ onClick: () => void; loading?: boolean }> = ({ onClick, loading }) => {
+  const { t } = useLanguage();
+
+  return (
+    <div className="p-5 bg-white border-t border-slate-100">
+      <button
+        onClick={onClick}
+        disabled={loading}
+        className="w-full h-12 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60"
+      >
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+        {t('link.queryAfterPay')}
+        <SearchCheck className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
 
 const Info: React.FC<{ label: string; value: string; light?: boolean }> = ({ label, value, light }) => (
   <div className="flex items-center justify-between gap-4">

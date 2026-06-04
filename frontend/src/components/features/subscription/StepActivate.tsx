@@ -5,6 +5,7 @@ import { postPayerMaxDemoApi } from '@/services/payermaxClient';
 import { OrderResultPanel } from '@/components/shared/OrderResultPanel';
 import { isCallbackUrl } from '@/lib/callbackReturn';
 import { MockReturnPage } from '@/components/shared/MockReturnPage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type ActivationState = 'idle' | 'queryable' | 'failed';
 type ReturnSignal = 'callback' | 'postMessage' | 'fallback' | 'polling';
@@ -26,6 +27,7 @@ export const StepActivate: React.FC = () => {
     lastApiStepId,
     stepApiExchanges,
   } = useSubscription();
+  const { t } = useLanguage();
 
   const [isQuerying, setIsQuerying] = React.useState(false);
   const [isTransitioning, setIsTransitioning] = React.useState(false);
@@ -47,11 +49,7 @@ export const StepActivate: React.FC = () => {
   const shouldWaitForCallbackOnly = subMode === 'payermax'
     && integrationMode === 'cashier'
     && currentStep.id === 'pm-activate';
-  const orderResultDesc = integrationMode === 'api'
-    ? '前端 JS 已使用 Direct Payment 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
-    : integrationMode === 'component'
-      ? '前端 JS 已使用 paymentToken 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
-      : 'PayerMax 收银台已返回 orderAndPay 结果。左侧展示本次 orderAndPay 的真实请求和响应。';
+  const orderResultDesc = '';
   const hasOrderResponse = Boolean(
     activationResponse?.data?.outTradeNo ||
       activationResponse?.data?.tradeToken ||
@@ -247,7 +245,7 @@ export const StepActivate: React.FC = () => {
             paymentMethod={paymentMethod || 'ALL_CASHIER'}
             status={(returnPayload.status as string) || orderStatus || orderCode || 'SUCCESS'}
             desc={orderResultDesc}
-            actionLabel="查看支付结果"
+            actionLabel={t('subscription.activate.checkResult')}
             onAction={() => { void completeActivation(sourceBySignal[returnSignal], returnPayload); }}
             disabled={isApiCalling || isQuerying}
           />
@@ -280,7 +278,7 @@ export const StepActivate: React.FC = () => {
             <button
               onClick={() => {
                 void completeActivation(isComponentOrderStep ? 'COMPONENT_REDIRECT_CONFIRMED' : 'LOCAL_3DS_CONFIRMED', {
-                  note: '用户完成授权/3DS 后，手动查询订阅状态。',
+                  note: t('subscription.activate.noteAuthDone'),
                 });
               }}
               disabled={isApiCalling || isQuerying}
@@ -289,11 +287,11 @@ export const StepActivate: React.FC = () => {
               {isApiCalling || isQuerying ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  正在查询订阅状态
+                  {t('subscription.activate.querying')}
                 </>
               ) : (
                 <>
-                  授权完成后，查询订阅状态
+                  {t('subscription.activate.queryAfterAuth')}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -312,8 +310,8 @@ export const StepActivate: React.FC = () => {
           />
           {(isQuerying || isTransitioning) && !shouldHideQueryOverlay && (
             <QueryOverlay
-              title="正在查询订阅状态"
-              desc="授权页面已返回，正在调用 subscriptionQuery 获取真实激活结果。"
+              title={t('subscription.activate.querying')}
+              desc={t('subscription.activate.queryReturned')}
             />
           )}
         </div>
@@ -324,9 +322,9 @@ export const StepActivate: React.FC = () => {
   if (isApiCalling) {
     return (
       <LoadingPanel
-        title="正在请求 orderAndPay"
+        title={t('subscription.activate.requestingOrder')}
         status={orderStatus || orderCode || 'TRANSMITTING'}
-        desc="前端 JS 正在使用上一阶段的 sessionKey 与 paymentToken 发起订阅激活下单。"
+        desc=""
       />
     );
   }
@@ -334,9 +332,9 @@ export const StepActivate: React.FC = () => {
   if (isQuerying) {
     return (
       <LoadingPanel
-        title="正在查询订阅状态"
+        title={t('subscription.activate.querying')}
         status={orderStatus || orderCode || 'QUERYING'}
-        desc="正在调用 subscriptionQuery，并在最后一步展示真实订阅激活状态。"
+        desc={t('subscription.activate.queryDesc')}
       />
     );
   }
@@ -348,9 +346,9 @@ export const StepActivate: React.FC = () => {
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
             <CheckCircle2 className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-black text-slate-900">准备支付下单激活订阅</h3>
+          <h3 className="text-base font-black text-slate-900">{t('subscription.activate.prepareTitle')}</h3>
           <p className="text-xs text-slate-500 leading-relaxed mt-2">
-            系统将使用第二步获得的 sessionKey 与 paymentToken，由前端 JS 调用 orderAndPay 激活订阅。
+            {t('subscription.activate.prepareDesc')}
           </p>
 
           <div className="mt-4 grid grid-cols-1 gap-2">
@@ -365,7 +363,7 @@ export const StepActivate: React.FC = () => {
             disabled={!componentPaymentToken || !componentSessionData?.sessionKey || isApiCalling}
             className="w-full h-12 bg-emerald-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            调用 orderAndPay 激活订阅
+            {t('subscription.activate.callOrder')}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -378,12 +376,12 @@ export const StepActivate: React.FC = () => {
       <OrderResultPanel
         paymentMethod={paymentMethod || 'ALL_CASHIER'}
         status={orderStatus || orderCode || 'UNKNOWN'}
-        desc="本步骤保留支付下单激活结果。点击下方按钮后，再调用 subscriptionQuery 进入最终结果页。"
-        actionLabel="查看支付结果"
+        desc={t('subscription.activate.orderReturnedDesc')}
+        actionLabel={t('subscription.activate.checkResult')}
         onAction={() => {
           void completeActivation('COMPONENT_ORDER_STATUS_CONFIRMED', {
             status: orderStatus,
-            note: '组件模式 orderAndPay 已返回，手动查询订阅状态。',
+            note: t('subscription.activate.noteComponentReturned'),
           });
         }}
         disabled={isQuerying}
@@ -397,11 +395,11 @@ export const StepActivate: React.FC = () => {
         paymentMethod={paymentMethod || 'ALL_CASHIER'}
         status={orderStatus || orderCode || 'UNKNOWN'}
         desc={orderResultDesc}
-        actionLabel="查看支付结果"
+        actionLabel={t('subscription.activate.checkResult')}
         onAction={() => {
           void completeActivation(isComponentOrderStep ? 'COMPONENT_ORDER_STATUS_CONFIRMED' : 'ORDER_AND_PAY_STATUS_CONFIRMED', {
             status: orderStatus,
-            note: 'orderAndPay 已返回，用户点击后查询订阅激活结果。',
+            note: t('subscription.activate.noteOrderReturned'),
           });
         }}
         disabled={isQuerying}
@@ -413,9 +411,9 @@ export const StepActivate: React.FC = () => {
     return (
       <StatusPanel
         tone="red"
-        title="激活请求未成功"
+        title={t('subscription.activate.failedTitle')}
         status={orderCode || 'UNKNOWN'}
-        desc="请查看左侧 orderAndPay 响应体中的错误原因。"
+        desc={t('subscription.activate.failedDesc')}
       />
     );
   }
@@ -425,9 +423,9 @@ export const StepActivate: React.FC = () => {
       <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
         <AlertCircle className="w-7 h-7 text-amber-600" />
       </div>
-      <h3 className="text-base font-black text-slate-900">等待激活请求</h3>
+      <h3 className="text-base font-black text-slate-900">{t('subscription.activate.waitTitle')}</h3>
       <p className="text-xs text-slate-500 leading-relaxed mt-2">
-        系统会根据上一步结果调用 orderAndPay，并根据 redirectUrl 或 status 进入后续查询。
+        {t('subscription.activate.waitDesc')}
       </p>
     </div>
   );
@@ -440,18 +438,22 @@ const InfoPill: React.FC<{ label: string; value: string }> = ({ label, value }) 
   </div>
 );
 
-const LoadingPanel: React.FC<{ title: string; status: string; desc: string }> = ({ title, status, desc }) => (
-  <div className="h-full bg-slate-50 flex flex-col items-center justify-center px-8 text-center">
-    <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
-      <Loader2 className="w-7 h-7 text-indigo-600 animate-spin" />
+const LoadingPanel: React.FC<{ title: string; status: string; desc: string }> = ({ title, status, desc }) => {
+  const { t } = useLanguage();
+
+  return (
+    <div className="h-full bg-slate-50 flex flex-col items-center justify-center px-8 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
+        <Loader2 className="w-7 h-7 text-indigo-600 animate-spin" />
+      </div>
+      <h3 className="text-base font-black text-slate-900">{title}</h3>
+      <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-black text-blue-700">
+        {t('subscription.activate.orderStatus')}：{status}
+      </div>
+      <p className="text-xs text-slate-500 leading-relaxed mt-3">{desc}</p>
     </div>
-    <h3 className="text-base font-black text-slate-900">{title}</h3>
-    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] font-black text-blue-700">
-      orderAndPay 状态：{status}
-    </div>
-    <p className="text-xs text-slate-500 leading-relaxed mt-3">{desc}</p>
-  </div>
-);
+  );
+};
 
 const StatusPanel: React.FC<{
   tone: 'blue' | 'red';

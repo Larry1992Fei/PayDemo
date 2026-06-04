@@ -7,6 +7,7 @@ import type { PaymentMethod } from '@/types/subscription';
 import { calculateActivationAmount, getMandateAmounts, normalizeFullCashierSubscriptionParams } from '@/types/subscription';
 import { buildFirstPeriodStartDate, buildSubscriptionPlan } from '@/types/subscription';
 import { getErrorMessage, showUiError, showUiWarning } from '@/lib/uiFeedback';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const CardIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth={2}>
@@ -69,6 +70,7 @@ export const StepComponent: React.FC = () => {
     completeActivationWithQuery,
     goNext,
   } = useSubscription();
+  const { t } = useLanguage();
 
   const [sdkStatus, setSdkStatus] = useState<'idle' | 'loading' | 'ready' | 'missing' | 'unsupported'>('idle');
   const [isTokenizing, setIsTokenizing] = useState(false);
@@ -114,7 +116,7 @@ export const StepComponent: React.FC = () => {
     return {
       subscriptionPlan: {
         subject: 'subject',
-        description: 'PMMAX周期首期扣款。',
+        description: 'PayerMax subscription first-period debit.',
         totalPeriods: Number(formParams.totalPeriods || 12),
         periodRule: {
           periodUnit: formParams.periodUnit || 'M',
@@ -275,11 +277,11 @@ export const StepComponent: React.FC = () => {
   const handleTokenGen = async (activeInstance?: any): Promise<string | null> => {
     const targetInstance = activeInstance || instanceRef.current;
     if (!targetInstance) {
-      showUiWarning(`组件实例不存在：${currentMethod} 尚未完成挂载，请重新选择支付方式或刷新页面后重试。`);
+      showUiWarning(t('subscription.toast.componentMissing').replace('{method}', currentMethod));
       return null;
     }
     if (primaryInFlightRef.current) {
-      showUiWarning(`正在处理上一笔 ${currentMethod.toUpperCase()} token 请求，请等待组件返回后再点击。`);
+      showUiWarning(t('subscription.toast.tokenBusy').replace('{method}', currentMethod.toUpperCase()));
       return null;
     }
     primaryInFlightRef.current = true;
@@ -297,7 +299,7 @@ export const StepComponent: React.FC = () => {
       const response: any = await withTimeout(
         Promise.resolve(targetInstance.emit('canMakePayment', canMakePaymentArgs)),
         15000,
-        `${currentMethod.toUpperCase()} canMakePayment 15秒未返回，可能是钱包弹窗未拉起、浏览器环境不支持，或 SDK 内部未触发回调。`
+        t('subscription.toast.canMakePaymentTimeout').replace('{method}', currentMethod.toUpperCase())
       );
       console.log('[Subscription Component] canMakePayment response', currentMethod, response);
 
@@ -316,7 +318,9 @@ export const StepComponent: React.FC = () => {
         targetInstance.emit('payFail');
       }
       targetInstance.emit('setDisabled', false);
-      showUiError(`获取 ${currentMethod.toUpperCase()} paymentToken 失败：${response?.msg || response?.message || response?.code || JSON.stringify(response)}`);
+      showUiError(t('subscription.error.tokenFailed')
+        .replace('{method}', currentMethod.toUpperCase())
+        .replace('{reason}', response?.msg || response?.message || response?.code || JSON.stringify(response)));
       return null;
     } catch (error) {
       console.error('canMakePayment failed:', error);
@@ -327,7 +331,9 @@ export const StepComponent: React.FC = () => {
         }
         targetInstance.emit('setDisabled', false);
       } catch { /* ignore */ }
-      showUiError(`获取 ${currentMethod.toUpperCase()} paymentToken 异常：${getErrorMessage(error, 'UNKNOWN_ERROR')}`);
+      showUiError(t('subscription.error.tokenException')
+        .replace('{method}', currentMethod.toUpperCase())
+        .replace('{reason}', getErrorMessage(error, 'UNKNOWN_ERROR')));
       return null;
     } finally {
       setIsTokenizing(false);
@@ -379,7 +385,7 @@ export const StepComponent: React.FC = () => {
       if (result?.code === 'APPLY_SUCCESS' || result?.code === 'PAY_SUCCESS' || result?.code === 'SUCCESS' || result?.data?.redirectUrl) {
         goNext();
       } else {
-        showUiError(`首次绑定下单失败：${result?.msg || result?.message || result?.code || 'UNKNOWN_ERROR'}`);
+        showUiError(t('subscription.error.firstBindFailed').replace('{reason}', result?.msg || result?.message || result?.code || 'UNKNOWN_ERROR'));
       }
       return;
     }
@@ -399,7 +405,7 @@ export const StepComponent: React.FC = () => {
         goNext();
       }
     } else {
-      showUiError(`激活订阅失败：${result.msg || result.message || result.code || 'UNKNOWN_ERROR'}`);
+      showUiError(t('subscription.error.activateFailed') + `: ${result.msg || result.message || result.code || 'UNKNOWN_ERROR'}`);
     }
   };
 
@@ -416,7 +422,7 @@ export const StepComponent: React.FC = () => {
           </div>
           <div>
             <span className="block text-[14px] font-bold text-slate-900 tracking-tight">Subscription Checkout</span>
-            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Merchant Hosted</span>
+            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">{t('subscription.component.hosted')}</span>
           </div>
         </div>
         <div className="text-right">
@@ -431,21 +437,21 @@ export const StepComponent: React.FC = () => {
           <div className="rounded-2xl bg-slate-900 text-white p-3 shadow-lg shadow-slate-200">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PayerMax Managed Plan</p>
-                <p className="mt-1 text-[12px] font-black truncate">{subscriptionNo || 'Subscription plan created'}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('subscription.component.managedPlan')}</p>
+                <p className="mt-1 text-[12px] font-black truncate">{subscriptionNo || t('subscription.component.planCreated')}</p>
               </div>
               <span className="shrink-0 rounded-full bg-white/10 px-2 py-1 text-[10px] font-black uppercase">
                 {currentMethod}
               </span>
             </div>
             <p className="mt-2 text-[10px] font-semibold text-slate-300 leading-relaxed">
-              前端 JS 已预取组件 Session。这里按用户选择动态加载 PayerMax 前置组件，获取 paymentToken 后继续直连 PayerMax 完成首次绑定/激活。
+              {t('subscription.component.planHint')}
             </p>
           </div>
         </div>
         )}
 
-        <p className="px-5 pt-5 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Method</p>
+        <p className="px-5 pt-5 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('subscription.component.selectMethod')}</p>
 
         <div className="px-4 space-y-2">
           {methods.map((method) => {
@@ -479,7 +485,7 @@ export const StepComponent: React.FC = () => {
                     <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
                       {!hasSession ? (
                         <div className="min-h-[120px] flex items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
-                          <p className="text-[10px] font-bold text-slate-400">Component session is preparing...</p>
+                          <p className="text-[10px] font-bold text-slate-400">{t('subscription.component.sessionPreparing')}</p>
                         </div>
                       ) : (
                         <div id="pmx-subscription-card-container" className="min-h-[120px]">
@@ -491,7 +497,7 @@ export const StepComponent: React.FC = () => {
                         </div>
                       )}
                       <p className="mt-3 text-[10px] font-semibold text-slate-400 leading-relaxed">
-                        这里动态挂载 PayerMax Card Component。真实卡信息由组件收集，商户前端只拿 paymentToken。
+                        {t('subscription.component.cardHint')}
                       </p>
                     </div>
                   </div>
@@ -507,11 +513,11 @@ export const StepComponent: React.FC = () => {
               {sdkStatus === 'loading' ? (
                 <div className="flex items-center gap-2 text-slate-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-[10px] font-bold">Wallet component is preparing...</span>
+                  <span className="text-[10px] font-bold">{t('subscription.component.walletPreparing')}</span>
                 </div>
               ) : (
                 <p className="text-[10px] font-semibold text-slate-400 leading-relaxed">
-                  {currentMethodLabel} 组件已加载。真实组件按钮会展示在底部操作区，点击后获取 paymentToken，用于后续调用 orderAndPay 激活订阅。
+                  {t('subscription.component.methodReady').replace('{method}', currentMethodLabel)}
                 </p>
               )}
             </div>
@@ -522,7 +528,7 @@ export const StepComponent: React.FC = () => {
           <div className="mx-4 mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-3 flex gap-2">
             <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <p className="text-[10px] font-semibold text-blue-800 leading-relaxed">
-              applySession 会在创建订阅计划后自动完成。当前正在等待 sessionKey/clientKey，然后会在此页动态挂载对应组件。
+              {t('subscription.component.waitSession')}
             </p>
           </div>
         )}
@@ -531,7 +537,7 @@ export const StepComponent: React.FC = () => {
           <div className="mx-4 mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 flex gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-[10px] font-semibold text-amber-800 leading-relaxed">
-              当前页面未检测到 PMdropin SDK。演示环境可继续生成本地 token；真实接入时这里应展示 PayerMax 动态组件。
+              {t('subscription.component.sdkMissing')}
             </p>
           </div>
         )}
@@ -542,14 +548,14 @@ export const StepComponent: React.FC = () => {
               <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">paymentToken</span>
               <button type="button" onClick={copyToken} className="h-7 px-2 rounded-lg bg-slate-900 text-white text-[10px] font-bold flex items-center gap-1 active:scale-95 transition-transform">
                 <Copy className="w-3 h-3" />
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? t('subscription.component.copied') : t('subscription.component.copy')}
               </button>
             </div>
             <div className="text-[10px] font-mono text-slate-700 break-all leading-relaxed rounded-xl border border-emerald-100 bg-white px-3 py-2">
               {componentPaymentToken}
             </div>
             <p className="mt-2 text-[10px] font-semibold leading-relaxed text-emerald-800/80">
-              将 paymentToken、sessionKey、subscriptionNo 用于后续 orderAndPay 激活订阅。
+              {t('subscription.component.tokenUsage')}
             </p>
           </div>
         )}
@@ -566,7 +572,7 @@ export const StepComponent: React.FC = () => {
               className="w-full h-12 font-bold rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-[13px] uppercase tracking-wider disabled:opacity-50"
             >
               <ArrowRight className="w-4 h-4" />
-              <span>获取token下单请求</span>
+              <span>{t('subscription.component.submitToken')}</span>
             </button>
           ) : componentActivationResult && subMode === 'payermax' ? (
             <button
@@ -576,7 +582,7 @@ export const StepComponent: React.FC = () => {
               className="w-full h-12 font-bold rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-[13px] uppercase tracking-wider disabled:opacity-50"
             >
               {isApiCalling ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              <span>Query Subscription Status</span>
+              <span>{t('subscription.component.queryStatus')}</span>
             </button>
           ) : hasToken && subMode !== 'payermax' ? (
             <button
@@ -586,7 +592,7 @@ export const StepComponent: React.FC = () => {
               className="w-full h-12 font-bold rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-[13px] uppercase tracking-wider disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Submit Token & Order</span>
+              <span>{t('subscription.component.submitTokenOrder')}</span>
             </button>
           ) : (
             <div className="relative min-h-[50px]">
@@ -594,9 +600,9 @@ export const StepComponent: React.FC = () => {
                 <div className="flex flex-col items-center justify-center gap-1.5 animate-in fade-in duration-500">
                   <div className="flex items-center gap-2 text-amber-600">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-[12px] font-bold">Device Unsupported</span>
+                    <span className="text-[12px] font-bold">{t('subscription.component.deviceUnsupported')}</span>
                   </div>
-                  <p className="text-[10px] text-slate-400 font-medium">Please use Safari or an iOS device</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{t('subscription.component.applePayHint')}</p>
                 </div>
               )}
 
@@ -612,7 +618,7 @@ export const StepComponent: React.FC = () => {
                 >
                   {(isApiCalling || isTokenizing) ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                     <>
-                      <span>{subMode === 'payermax' && currentStep.id === 'pm-2' ? 'Tokenize & Order' : subMode === 'payermax' ? 'Confirm & Activate' : 'Confirm Authorization'}</span>
+                      <span>{subMode === 'payermax' && currentStep.id === 'pm-2' ? t('subscription.component.tokenizeOrder') : subMode === 'payermax' ? t('subscription.component.confirmActivate') : t('subscription.component.confirmAuth')}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   )}

@@ -7,6 +7,7 @@ import { buildStandardOrderRequest } from '@/config/standardRequestBuilder';
 import { postPayerMaxDemoApi } from '@/services/payermaxClient';
 import { showUiError, showUiWarning } from '@/lib/uiFeedback';
 import { createDemoUserId } from '@/lib/demoIds';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // 类型定义
 export type ProductMode = 'STANDARD' | 'SUBSCRIPTION' | 'PAYMENT_LINK' | 'DISBURSEMENT';
@@ -111,7 +112,7 @@ const normalizePaymentResult = (result: any): NormalizedPaymentResult => {
   const status = result?.data?.status || result?.data?.payStatus || result?.data?.paymentStatus;
   const redirectUrl = result?.data?.redirectUrl || null;
   const orderNo = result?.localOrderNo || result?.data?.orderNo || result?.data?.outTradeNo;
-  const message = result?.msg || result?.message || '未知响应';
+  const message = result?.msg || result?.message || 'Unknown response';
 
   if (code === 'PAY_SUCCESS' || status === 'SUCCESS' || status === 'TRADE_SUCCESS') {
     return { ok: true, nextAction: 'success', orderNo, redirectUrl, message };
@@ -135,6 +136,7 @@ const normalizePaymentResult = (result: any): NormalizedPaymentResult => {
 };
 
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useLanguage();
   // 持久化与初始化
   const storedProductMode = sessionStorage.getItem('productMode') as ProductMode;
   const storedIntegrationMode = sessionStorage.getItem('integrationMode') as PaymentIntegrationMode;
@@ -321,7 +323,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (cashierMode === 'SPECIFIC') {
           if (currentStep === 's1') {
             if (!isConcretePaymentMethod(selectedPaymentMethod)) {
-              showUiWarning('请先在右侧仿真手机点击 Buy Now，并在自建收银台内选择支付方式。');
+              showUiWarning(t('standard.toast.needSelfCashierSelection'));
               return;
             }
             await callOrderAndPay(nextStepId, selectedPaymentMethod);
@@ -336,7 +338,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
       else if (integrationMode === 'api') {
         if (currentStep === 's1') {
           if (!isConcretePaymentMethod(selectedPaymentMethod)) {
-            showUiWarning('请先在右侧仿真手机点击 Buy Now，并在自建收银台内选择支付方式。');
+            showUiWarning(t('standard.toast.needSelfCashierSelection'));
             return;
           }
           await callOrderAndPay(nextStepId, selectedPaymentMethod);
@@ -347,7 +349,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // 3. 组件模式逻辑
       else if (integrationMode === 'component') {
         if (currentStep === 's2' && !paymentToken) {
-          showUiWarning('请先在右侧仿真手机内选择支付方式并完成组件授权，获取 paymentToken 后再执行下一步。');
+          showUiWarning(t('standard.toast.needComponentAuth'));
           return;
         }
         setCurrentStep(nextStepId);
@@ -503,10 +505,10 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
           clientKey: result.data.clientKey
         });
       } else {
-        setSessionError(result.msg || '会话获取失败');
+        setSessionError(result.msg || t('standard.error.sessionFailed'));
       }
     } catch (err) {
-      const errorMsg = '网络请求失败，请检查服务状态';
+      const errorMsg = t('standard.error.networkFailed');
       setSessionError(errorMsg);
       console.error('Apply Session Error:', err);
     } finally {
@@ -518,7 +520,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const submitComponentOrder = async (stepId = currentStep) => {
     if (!paymentToken) {
       console.warn('paymentToken 缺失，无法下单');
-      showUiWarning('请先在右侧仿真手机内完成前置组件授权，获取 paymentToken 后再执行 orderAndPay。');
+      showUiWarning(t('standard.toast.needComponentToken'));
       return;
     }
 
@@ -549,12 +551,12 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
         return result;
       } else {
-        showUiError(`支付失败：${normalized.message}`);
+        showUiError(t('standard.error.paymentFailed').replace('{reason}', normalized.message));
         return result;
       }
     } catch (err) {
       console.error('Order Error:', err);
-      showUiError('浏览器直连 PayerMax 请求失败');
+      showUiError(t('standard.error.browserDirectFailed'));
       throw err;
     } finally {
       setIsApiCalling(false);
@@ -567,7 +569,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const effectivePaymentMethod = overridePaymentMethod || paymentMethod;
       if ((integrationMode !== 'cashier' || cashierMode === 'SPECIFIC') && !isConcretePaymentMethod(effectivePaymentMethod)) {
-        showUiWarning('请先在右侧仿真手机内选择支付方式。');
+        showUiWarning(t('standard.toast.needPaymentMethod'));
         return;
       }
       if (overridePaymentMethod) {
@@ -598,11 +600,11 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
         setCurrentStep(nextStepId);
       } else {
-        showUiError(`下单失败：${normalized.message}`);
+        showUiError(t('standard.error.orderFailed').replace('{reason}', normalized.message));
       }
     } catch (error) {
       console.error('API Error:', error);
-      showUiError('浏览器直连 PayerMax 请求失败，请检查网络、CORS 或签名配置');
+      showUiError(t('standard.error.browserDirectFailedFull'));
     } finally {
       setIsApiCalling(false);
     }
@@ -617,7 +619,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     if (!requestBody.outTradeNo && !requestBody.tradeToken) {
-      throw new Error('缺少 orderQuery 查询参数');
+      throw new Error(t('standard.error.missingOrderQuery'));
     }
 
     setIsApiCalling(true);

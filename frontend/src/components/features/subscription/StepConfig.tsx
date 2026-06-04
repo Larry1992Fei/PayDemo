@@ -4,6 +4,7 @@ import { SUBSCRIPTION_TYPE_CONFIG, getMandateAmounts, type SubscriptionType } fr
 import { cn } from '@/lib/utils';
 import { ArrowRight, CheckCircle2, CreditCard, ShieldCheck } from 'lucide-react';
 import { SelfHostedApiCashier, getBusinessError } from './StepBind';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const StepConfig: React.FC = () => {
   const {
@@ -22,6 +23,7 @@ export const StepConfig: React.FC = () => {
     mandateTokenId,
     lastApiResponse
   } = useSubscription();
+  const { t } = useLanguage();
   const [showApiCashier, setShowApiCashier] = React.useState(false);
 
   const mandateAmounts = getMandateAmounts(subMode, formParams, paymentMethod);
@@ -40,7 +42,7 @@ export const StepConfig: React.FC = () => {
           setPaymentMethod={setPaymentMethod}
           isApiCalling={isApiCalling}
           mandateTokenId={mandateTokenId}
-          errorMessage={getBusinessError(lastApiResponse)}
+          errorMessage={getBusinessError(lastApiResponse, t)}
           onSubmit={async () => {
             const orderStepId = subMode === 'merchant' ? 'm-order' : 'np-order';
             const result = await bindMandatePaymentMethod(paymentMethod, orderStepId);
@@ -74,10 +76,9 @@ export const StepConfig: React.FC = () => {
   return (
     <div className="space-y-6">
       {isPayerMaxManaged && (
-        <Panel title="订阅套餐" desc="PayerMax 托管模式会把套餐规则写入 subscriptionCreate，由 PayerMax 管理后续周期扣款。">
+        <Panel title={t('subscription.config.planTitle')} desc={t('subscription.config.planDesc')}>
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(SUBSCRIPTION_TYPE_CONFIG) as SubscriptionType[]).map((type) => {
-              const conf = SUBSCRIPTION_TYPE_CONFIG[type];
               return (
                 <button
                   key={type}
@@ -89,8 +90,8 @@ export const StepConfig: React.FC = () => {
                       : 'border-slate-200 text-slate-500 hover:border-slate-300'
                   )}
                 >
-                  <span className="block text-xs font-black">{conf.label}</span>
-                  <span className="mt-0.5 block text-[10px] font-semibold opacity-70">{conf.desc}</span>
+                  <span className="block text-xs font-black">{t(`subscription.type.${type}.label`)}</span>
+                  <span className="mt-0.5 block text-[10px] font-semibold opacity-70">{t(`subscription.type.${type}.desc`)}</span>
                 </button>
               );
             })}
@@ -99,7 +100,7 @@ export const StepConfig: React.FC = () => {
       )}
 
       {isMerchantManaged && (
-        <Panel title="商户自管规则" desc="PayerMax 只完成首次绑定并返回 paymentTokenID；订阅周期、优惠期和后续扣款金额由商户系统自行管理。">
+        <Panel title={t('subscription.config.merchantTitle')} desc={t('subscription.config.merchantDesc')}>
           <MandateSummary
             firstAmount={`${mandateAmounts.currency} ${mandateAmounts.firstBindAmount}`}
             laterAmount={`${mandateAmounts.currency} ${mandateAmounts.laterDebitAmount}`}
@@ -109,7 +110,7 @@ export const StepConfig: React.FC = () => {
       )}
 
       {isNonPeriodic && (
-        <Panel title="非周期代扣规则" desc="首次绑定成功后保存 paymentTokenID；后续由商户按业务触发扣款，不存在固定订阅周期。">
+        <Panel title={t('subscription.config.nonperiodicTitle')} desc={t('subscription.config.nonperiodicDesc')}>
           <MandateSummary
             firstAmount={`${mandateAmounts.currency} ${mandateAmounts.firstBindAmount}`}
             laterAmount={`${mandateAmounts.currency} ${mandateAmounts.laterDebitAmount}`}
@@ -118,50 +119,50 @@ export const StepConfig: React.FC = () => {
         </Panel>
       )}
 
-      <Panel title="参数配置">
+      <Panel title={t('subscription.config.parameters')}>
         {isPayerMaxManaged && (
           <div className="space-y-4">
             {paymentMethod === 'apm' && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-amber-800">
-                APM 订阅演示固定使用 KR / KRW：后续扣款 1000，优惠期 100，试用激活 0。
+                {t('subscription.config.apmFixed')}
               </div>
             )}
             <FormRow>
-              <FormField label="总期数" id="totalPeriods">
+              <FormField label={t('subscription.config.totalPeriods')} id="totalPeriods">
                 <input type="number" min="1" value={formParams.totalPeriods}
                   onChange={e => updateFormParam('totalPeriods', e.target.value)}
                   className={inputCls} />
               </FormField>
-              <FormField label="扣款频率" id="periodCount">
+              <FormField label={t('subscription.config.periodCount')} id="periodCount">
                 <input type="number" min="1" value={formParams.periodCount}
                   onChange={e => updateFormParam('periodCount', e.target.value)}
                   className={inputCls} />
               </FormField>
             </FormRow>
             <FormRow>
-              <FormField label="周期单位" id="periodUnit">
+              <FormField label={t('subscription.config.periodUnit')} id="periodUnit">
                 <select value={formParams.periodUnit}
                   onChange={e => updateFormParam('periodUnit', e.target.value as 'D' | 'W' | 'M' | 'Y')}
                   className={inputCls}>
-                  <option value="D">日</option>
-                  <option value="W">周</option>
-                  <option value="M">月</option>
-                  <option value="Y">年</option>
+                  <option value="D">{t('subscription.config.unit.D')}</option>
+                  <option value="W">{t('subscription.config.unit.W')}</option>
+                  <option value="M">{t('subscription.config.unit.M')}</option>
+                  <option value="Y">{t('subscription.config.unit.Y')}</option>
                 </select>
               </FormField>
-              <FormField label="每期金额" id="amount">
+              <FormField label={t('subscription.config.amount')} id="amount">
                 <input type="number" step="0.01" min="0" value={formParams.amount}
                   onChange={e => updateFormParam('amount', e.target.value)}
                   className={inputCls} />
               </FormField>
             </FormRow>
-            <FormField label="币种" id="currency">
+            <FormField label={t('subscription.config.currency')} id="currency">
               <input type="text" value={formParams.currency}
                 onChange={e => updateFormParam('currency', e.target.value)}
                 className={inputCls} />
             </FormField>
             {(subscriptionType === 'trial' || subscriptionType === 'trial_discount') && (
-              <FormField label="试用天数" id="trialDays">
+              <FormField label={t('subscription.config.trialDays')} id="trialDays">
                 <input type="number" min="1" value={formParams.trialDays}
                   onChange={e => updateFormParam('trialDays', e.target.value)}
                   className={inputCls} />
@@ -169,12 +170,12 @@ export const StepConfig: React.FC = () => {
             )}
             {(subscriptionType === 'discount' || subscriptionType === 'trial_discount') && (
               <FormRow>
-                <FormField label="优惠期数" id="trialPeriodCount">
+                <FormField label={t('subscription.config.discountPeriods')} id="trialPeriodCount">
                   <input type="number" min="1" value={formParams.trialPeriodCount}
                     onChange={e => updateFormParam('trialPeriodCount', e.target.value)}
                     className={inputCls} />
                 </FormField>
-                <FormField label="优惠期金额" id="trialPeriodAmount">
+                <FormField label={t('subscription.config.discountAmount')} id="trialPeriodAmount">
                   <input type="number" step="0.01" value={formParams.trialPeriodAmount}
                     onChange={e => updateFormParam('trialPeriodAmount', e.target.value)}
                     className={inputCls} />
@@ -188,23 +189,23 @@ export const StepConfig: React.FC = () => {
           <div className="space-y-4">
             <BindTypeSelector value={formParams.bindType} onChange={v => updateFormParam('bindType', v)} />
             <FormRow>
-              <FormField label={formParams.bindType === 'zero' ? '后续计划扣款金额' : '首次及后续扣款金额'} id="merchantAmount">
+              <FormField label={formParams.bindType === 'zero' ? t('subscription.config.laterPlanAmount') : t('subscription.config.firstAndLaterAmount')} id="merchantAmount">
                 <input type="number" step="0.01" min="0" value={formParams.merchantAmount}
                   onChange={e => updateFormParam('merchantAmount', e.target.value)}
                   className={inputCls} />
               </FormField>
-              <FormField label="币种" id="merchantCurrency">
+              <FormField label={t('subscription.config.currency')} id="merchantCurrency">
                 <input type="text" value={formParams.merchantCurrency}
                   onChange={e => updateFormParam('merchantCurrency', e.target.value)}
                   className={inputCls} />
               </FormField>
             </FormRow>
-            <FormField label="订单标题" id="merchantSubject">
+            <FormField label={t('subscription.config.subject')} id="merchantSubject">
               <input type="text" value={formParams.merchantSubject}
                 onChange={e => updateFormParam('merchantSubject', e.target.value)}
                 className={inputCls} />
             </FormField>
-            <FormField label="用户 ID" id="merchantUserId">
+            <FormField label={t('subscription.config.userId')} id="merchantUserId">
               <input type="text" value={formParams.merchantUserId}
                 onChange={e => updateFormParam('merchantUserId', e.target.value)}
                 className={inputCls} />
@@ -216,12 +217,12 @@ export const StepConfig: React.FC = () => {
           <div className="space-y-4">
             <BindTypeSelector value={formParams.bindType} onChange={v => updateFormParam('bindType', v)} />
             <FormRow>
-              <FormField label={formParams.bindType === 'zero' ? '后续按需扣款金额' : '首次及后续扣款金额'} id="npAmount">
+              <FormField label={formParams.bindType === 'zero' ? t('subscription.config.laterOnDemandAmount') : t('subscription.config.firstAndLaterAmount')} id="npAmount">
                 <input type="number" step="0.01" min="0" value={formParams.npAmount}
                   onChange={e => updateFormParam('npAmount', e.target.value)}
                   className={inputCls} />
               </FormField>
-              <FormField label="币种" id="npCurrency">
+              <FormField label={t('subscription.config.currency')} id="npCurrency">
                 <input type="text" value={formParams.npCurrency}
                   onChange={e => updateFormParam('npCurrency', e.target.value)}
                   className={inputCls} />
@@ -245,9 +246,12 @@ const Panel: React.FC<{ title: string; desc?: string; children: React.ReactNode 
 const BindTypeSelector: React.FC<{
   value: 'zero' | 'paid';
   onChange: (value: 'zero' | 'paid') => void;
-}> = ({ value, onChange }) => (
+}> = ({ value, onChange }) => {
+  const { t } = useLanguage();
+
+  return (
   <div>
-    <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">首次绑定类型</p>
+    <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">{t('subscription.config.firstBindType')}</p>
     <div className="grid grid-cols-2 gap-3">
       {(['zero', 'paid'] as const).map(type => (
         <button
@@ -260,27 +264,32 @@ const BindTypeSelector: React.FC<{
               : 'border-slate-200 text-slate-500 hover:border-slate-300'
           )}
         >
-          <span className="block text-xs font-black">{type === 'zero' ? '首次 0 元绑定' : '首次 >0 元绑定'}</span>
+          <span className="block text-xs font-black">{type === 'zero' ? t('subscription.config.zeroBind') : t('subscription.config.paidBind')}</span>
           <span className="mt-0.5 block text-[10px] font-semibold opacity-70">
-            {type === 'zero' ? '只完成授权并获取 token' : '绑定同时完成首笔支付'}
+            {type === 'zero' ? t('subscription.config.zeroBindDesc') : t('subscription.config.paidBindDesc')}
           </span>
         </button>
       ))}
     </div>
   </div>
-);
+  );
+};
 
 const MandateSummary: React.FC<{ firstAmount: string; laterAmount: string; mitType: string }> = ({
   firstAmount,
   laterAmount,
   mitType
-}) => (
-  <div className="grid grid-cols-3 gap-2 text-xs">
-    <SummaryItem label="首次绑定金额" value={firstAmount} />
-    <SummaryItem label="后续扣款金额" value={laterAmount} />
-    <SummaryItem label="MIT 类型" value={mitType} />
-  </div>
-);
+}) => {
+  const { t } = useLanguage();
+
+  return (
+    <div className="grid grid-cols-3 gap-2 text-xs">
+      <SummaryItem label={t('subscription.config.firstBindAmount')} value={firstAmount} />
+      <SummaryItem label={t('subscription.config.laterDebitAmount')} value={laterAmount} />
+      <SummaryItem label={t('subscription.config.mitType')} value={mitType} />
+    </div>
+  );
+};
 
 const SummaryItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
@@ -298,6 +307,7 @@ const FirstBindTypePreview: React.FC<{
   onSelect: (value: 'zero' | 'paid') => void;
   onNext: () => void;
 }> = ({ mode, bindType, amount, currency, mitType, onSelect, onNext }) => {
+  const { t } = useLanguage();
   const isMerchant = mode === 'merchant';
   const options: Array<{
     id: 'zero' | 'paid';
@@ -308,20 +318,20 @@ const FirstBindTypePreview: React.FC<{
   }> = [
     {
       id: 'zero',
-      title: '首次 0 元绑定',
-      tag: '试用场景',
+      title: t('subscription.config.zeroBind'),
+      tag: t('subscription.config.trialScenario'),
       desc: isMerchant
-        ? '用户先完成授权并生成 paymentTokenID，商户在试用期结束后按订阅规则发起扣款。'
-        : '用户先完成扣款授权并生成 paymentTokenID，后续由商户按业务需要灵活发起扣款。',
+        ? t('subscription.config.zeroMerchantDesc')
+        : t('subscription.config.zeroNonperiodicDesc'),
       amount: `${currency} 0`,
     },
     {
       id: 'paid',
-      title: '首次 >0 元绑定',
-      tag: '首付场景',
+      title: t('subscription.config.paidBind'),
+      tag: t('subscription.config.firstPayScenario'),
       desc: isMerchant
-        ? '适用于前 N 期优惠或正常订阅，首次绑定时同步完成首笔支付并保存 token。'
-        : '适用于首次即收取费用的授权，绑定成功后商户保管 token 用于后续按需扣款。',
+        ? t('subscription.config.paidMerchantDesc')
+        : t('subscription.config.paidNonperiodicDesc'),
       amount: `${currency} ${amount}`,
     },
   ];
@@ -335,10 +345,10 @@ const FirstBindTypePreview: React.FC<{
               First Binding
             </p>
             <h2 className="mt-0.5 text-lg font-black tracking-tight">
-              {isMerchant ? '商户自管订阅' : '非周期性代扣'}
+              {isMerchant ? t('subscription.config.merchantPreviewTitle') : t('subscription.config.nonperiodicPreviewTitle')}
             </h2>
             <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
-              选择首次绑定金额类型，后续扣款计划由商户自行管理。
+              {t('subscription.config.previewHint')}
             </p>
           </div>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100">
@@ -386,7 +396,7 @@ const FirstBindTypePreview: React.FC<{
                       </span>
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2">
-                      <InfoTile label="首次金额" value={option.amount} active={active} />
+                      <InfoTile label={t('subscription.config.firstAmount')} value={option.amount} active={active} />
                       <InfoTile label="MIT Type" value={mitType} active={active} />
                     </div>
                   </div>
@@ -402,7 +412,7 @@ const FirstBindTypePreview: React.FC<{
             <div>
               <p className="text-sm font-black text-emerald-950">{selected.title}</p>
               <p className="mt-1 text-[11px] font-semibold leading-relaxed text-emerald-800/80">
-                下一步将调用 orderAndPay 完成首次下单绑定。
+                {t('subscription.config.nextOrderHint')}
               </p>
             </div>
             <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
@@ -418,7 +428,7 @@ const FirstBindTypePreview: React.FC<{
           onClick={onNext}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-black text-white shadow-lg shadow-emerald-100 transition-transform active:scale-95"
         >
-          首次下单绑定
+          {t('subscription.config.firstOrderBind')}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

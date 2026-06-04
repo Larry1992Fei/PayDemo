@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { ArrowRight, CheckCircle2, KeyRound, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const StepMandateBound: React.FC = () => {
   const {
@@ -13,6 +14,7 @@ export const StepMandateBound: React.FC = () => {
     goNext,
     deductWithMandateToken,
   } = useSubscription();
+  const { t } = useLanguage();
 
   const queriedRef = useRef(false);
   const stepId = subMode === 'nonperiodic' ? 'np-bound' : 'm-bound';
@@ -31,7 +33,7 @@ export const StepMandateBound: React.FC = () => {
   return (
     <div className="flex h-full flex-col bg-slate-50">
       <div className="bg-white px-5 py-4 border-b border-slate-100">
-        <h3 className="text-[15px] font-black text-slate-900">完成支付绑定</h3>
+        <h3 className="text-[15px] font-black text-slate-900">{t('subscription.bound.title')}</h3>
         <p className="text-[10px] font-bold text-slate-400 mt-0.5">orderQuery · verify binding result</p>
       </div>
 
@@ -40,9 +42,9 @@ export const StepMandateBound: React.FC = () => {
           <div className="mx-auto w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-3">
             {isApiCalling ? <Loader2 className="w-8 h-8 animate-spin" /> : <CheckCircle2 className="w-8 h-8" />}
           </div>
-          <h4 className="text-xl font-black">绑定结果已确认</h4>
+          <h4 className="text-xl font-black">{t('subscription.bound.confirmed')}</h4>
           <p className="text-xs font-semibold text-white/85 leading-relaxed mt-2">
-            已通过 orderQuery 查询首次绑定订单结果。商户需要保管 paymentTokenID，用于后续订阅扣款或按需代扣。
+            {t('subscription.bound.desc')}
           </p>
         </div>
 
@@ -54,13 +56,13 @@ export const StepMandateBound: React.FC = () => {
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">paymentTokenID</p>
               <p className="text-xs font-mono text-slate-800 mt-1 break-all">
-                {mandateTokenId || '等待 orderQuery 返回 paymentTokenID'}
+                {mandateTokenId || t('subscription.bound.waitToken')}
               </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <Info label="Query Status" value={queryStatus} />
-            <Info label="Bind Order" value={mandateBindOrderNo || '等待首次绑定订单号'} />
+            <Info label="Bind Order" value={mandateBindOrderNo || t('subscription.bound.waitOrder')} />
           </div>
         </div>
 
@@ -78,7 +80,7 @@ export const StepMandateBound: React.FC = () => {
           className="w-full h-12 rounded-2xl bg-indigo-600 text-white font-black flex items-center justify-center gap-2 disabled:opacity-60 active:scale-95 transition-all"
         >
           {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-          进入后续扣款
+          {t('subscription.bound.nextDebit')}
         </button>
       </div>
     </div>

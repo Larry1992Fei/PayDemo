@@ -1,9 +1,11 @@
 import React from 'react';
 import { useProduct } from '@/contexts/ProductContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Check, XCircle, Clock3 } from 'lucide-react';
 
 export const StepSuccess: React.FC = () => {
   const { paymentMethod, lastApiResponse, resetFlow, amount, currency, queryOrderStatus } = useProduct();
+  const { t } = useLanguage();
   const orderNo = lastApiResponse?.localOrderNo || lastApiResponse?.data?.orderNo || lastApiResponse?.data?.outTradeNo || 'ORDER_PENDING';
   const queryOutTradeNo = lastApiResponse?.data?.outTradeNo || orderNo;
   const tradeToken = lastApiResponse?.data?.tradeToken;
@@ -62,7 +64,7 @@ export const StepSuccess: React.FC = () => {
   const isSuccess = ['SUCCESS', 'PAY_SUCCESS', 'TRADE_SUCCESS'].includes(normalizedStatus);
   const pageTone = isFailed ? 'red' : isSuccess ? 'emerald' : 'amber';
   const pageTitle = isFailed ? 'Payment Failed' : isSuccess ? 'Payment Successful' : 'Payment Pending';
-  const pageSubtitle = '落地页已返回';
+  const pageSubtitle = t('result.returnReceived');
   const pageClass = pageTone === 'red'
     ? 'bg-red-500 text-white'
     : pageTone === 'amber'
@@ -88,7 +90,7 @@ export const StepSuccess: React.FC = () => {
         <p className="text-xs font-medium opacity-90 max-w-xs">{pageSubtitle}</p>
       </div>
       <div className="w-full max-w-xs bg-white/10 backdrop-blur-sm rounded-xl p-4 relative z-10">
-        <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/20"><span className="text-sm font-medium">Order Number</span><span className="text-sm font-bold truncate ml-4">{orderNo}</span></div>
+        <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/20"><span className="text-sm font-medium">{t('result.orderNo')}</span><span className="text-sm font-bold truncate ml-4">{orderNo}</span></div>
         <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/20"><span className="text-sm font-medium">Payment Method</span><span className="text-sm font-bold uppercase">{paymentMethod || 'N/A'}</span></div>
         <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/20"><span className="text-sm font-medium">Total Amount</span><span className="text-lg font-extrabold">{currency} {amount}</span></div>
         <div className="flex justify-between items-center"><span className="text-sm font-medium">Query Status</span><span className="text-sm font-bold">{queryStatus}</span></div>

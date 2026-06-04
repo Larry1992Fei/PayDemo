@@ -51,7 +51,7 @@ export const DynamicStepper: React.FC<DynamicStepperProps> = ({ steps, currentSt
               <div className="mt-3 flex justify-center">
                 <div
                   className={cn(
-                    'min-h-[28px] max-w-[96px] text-center text-[11.5px] font-bold leading-tight tracking-wide transition-colors duration-300',
+                    'min-h-[28px] whitespace-nowrap text-center text-[11.5px] font-bold leading-tight tracking-wide transition-colors duration-300',
                     (isCompleted || isCurrent) ? 'text-indigo-900' : 'text-slate-400'
                   )}
                 >

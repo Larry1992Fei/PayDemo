@@ -5,6 +5,7 @@ import { ArrowRight, CheckCircle2, CreditCard, Loader2, Server, ShieldCheck, Wal
 import { cn } from '@/lib/utils';
 import { isCallbackUrl } from '@/lib/callbackReturn';
 import { OrderResultPanel } from '@/components/shared/OrderResultPanel';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const CardIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth={2}>
@@ -49,6 +50,7 @@ export const StepBind: React.FC = () => {
     bindMandatePaymentMethod,
     goNext,
   } = useSubscription();
+  const { t } = useLanguage();
 
   const mandateAmounts = getMandateAmounts(subMode, formParams, paymentMethod);
   const mitType = mandateAmounts.mitType;
@@ -56,7 +58,7 @@ export const StepBind: React.FC = () => {
   const currency = mandateAmounts.currency;
   const isCashier = integrationMode === 'cashier';
   const isApi = integrationMode === 'api';
-  const errorMessage = getBusinessError(lastApiResponse);
+  const errorMessage = getBusinessError(lastApiResponse, t);
   const bindStepId = subMode === 'nonperiodic' ? 'np-bind' : 'm-bind';
   const cachedBindResponse = React.useMemo(
     () => parseExchangeResponse(stepApiExchanges[bindStepId]?.responseBody),
@@ -115,8 +117,8 @@ export const StepBind: React.FC = () => {
       <OrderResultPanel
         paymentMethod={paymentMethod ? PAYMENT_METHOD_CONFIG[paymentMethod].label : 'PayerMax Hosted Checkout'}
         status={bindStatus || bindCode || 'PENDING'}
-        desc="PayerMax 收银台已返回 orderAndPay 结果。左侧展示本次 orderAndPay 的真实请求和响应。"
-        actionLabel="查看绑定结果"
+        desc=""
+        actionLabel={t('subscription.bind.resultAction')}
         onAction={goNext}
         disabled={isApiCalling}
       />
@@ -124,13 +126,13 @@ export const StepBind: React.FC = () => {
   }
 
   const pmLabel = paymentMethod ? PAYMENT_METHOD_CONFIG[paymentMethod].label : 'PayerMax Hosted Checkout';
-  const buttonText = mandateTokenId ? '进入完成支付绑定' : '打开绑定收银台';
+  const buttonText = mandateTokenId ? t('subscription.bind.enterBound') : t('subscription.bind.openCashier');
 
   return (
     <div className="flex h-full flex-col bg-slate-50">
       <div className="bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <h3 className="text-[15px] font-black text-slate-900">PayerMax 收银台绑定</h3>
+          <h3 className="text-[15px] font-black text-slate-900">{t('subscription.bind.cashierTitle')}</h3>
           <p className="text-[10px] font-bold text-slate-400 mt-0.5">orderAndPay · tokenForFutureUse=true</p>
         </div>
         <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
@@ -148,7 +150,7 @@ export const StepBind: React.FC = () => {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">First Binding</p>
               <h4 className="text-sm font-black text-slate-900 mt-1">{pmLabel}</h4>
               <p className="text-xs text-slate-500 font-semibold leading-relaxed mt-1">
-                首次绑定需要用户参与授权，固定传 merchantInitiated=false，并生成后续扣款使用的 paymentTokenID。
+                {t('subscription.bind.firstBindingDesc')}
               </p>
             </div>
           </div>
@@ -172,7 +174,7 @@ export const StepBind: React.FC = () => {
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PayerMax API</p>
-            <p className="text-xs font-bold text-slate-700">调用 orderAndPay 获取 redirectUrl 并打开收银台</p>
+            <p className="text-xs font-bold text-slate-700">{t('subscription.bind.apiRedirect')}</p>
           </div>
         </div>
       </div>
@@ -202,7 +204,10 @@ export const SelfHostedApiCashier: React.FC<{
   mandateTokenId: string | null;
   errorMessage?: string | null;
   onSubmit: () => Promise<void>;
-}> = ({ amount, currency, mitType, paymentMethod, setPaymentMethod, isApiCalling, mandateTokenId, errorMessage, onSubmit }) => (
+}> = ({ amount, currency, mitType, paymentMethod, setPaymentMethod, isApiCalling, mandateTokenId, errorMessage, onSubmit }) => {
+  const { t } = useLanguage();
+
+  return (
   <div className="flex flex-col h-full bg-[#f8f9fb] font-sans relative">
     <div className="bg-white px-5 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-2.5">
@@ -235,7 +240,7 @@ export const SelfHostedApiCashier: React.FC<{
             </span>
           </div>
           <p className="mt-2 text-[10px] font-semibold text-slate-300 leading-relaxed">
-            商户自建收银台选择支付方式，前端 JS 直连 orderAndPay 完成首次绑定，并返回 paymentTokenID。
+            {t('subscription.bind.firstBindingDesc')}
           </p>
         </div>
       </div>
@@ -273,14 +278,14 @@ export const SelfHostedApiCashier: React.FC<{
       </div>
 
       <div className="mx-4 mt-4 rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800 font-semibold leading-relaxed">
-        API 模式下，商户页面负责收集支付信息，用于后续调用 orderAndPay。
+        {t('subscription.bind.apiHint')}
       </div>
 
       {mandateTokenId && (
         <div className="mx-4 mt-4 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3">
           <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
           <div className="min-w-0">
-            <div className="text-xs font-bold text-emerald-800 uppercase tracking-wide">绑定成功 · paymentTokenID</div>
+            <div className="text-xs font-bold text-emerald-800 uppercase tracking-wide">{t('subscription.bind.successToken')}</div>
             <div className="text-xs font-mono text-emerald-700 mt-1 break-all">{mandateTokenId}</div>
           </div>
         </div>
@@ -306,9 +311,11 @@ export const SelfHostedApiCashier: React.FC<{
       </button>
     </div>
   </div>
-);
+  );
+};
 
 const BrowserShell: React.FC<{ url: string; action?: React.ReactNode; onCallback?: () => void }> = ({ url, action, onCallback }) => {
+  const { t } = useLanguage();
   const callbackHandledRef = React.useRef(false);
   const [mockReturnUrl, setMockReturnUrl] = React.useState<string | null>(null);
 
@@ -345,8 +352,8 @@ const BrowserShell: React.FC<{ url: string; action?: React.ReactNode; onCallback
           <OrderResultPanel
             paymentMethod="ALL_CASHIER"
             status="PENDING"
-            desc="PayerMax 收银台已返回 orderAndPay 结果。左侧展示本次 orderAndPay 的真实请求和响应。"
-            actionLabel="查看绑定结果"
+            desc=""
+            actionLabel={t('subscription.bind.resultAction')}
             onAction={onCallback}
           />
         ) : (
@@ -397,13 +404,13 @@ function parseExchangeResponse(responseBody?: string): any | null {
   }
 }
 
-export function getBusinessError(result: any): string | null {
+export function getBusinessError(result: any, t: (key: string) => string = key => key): string | null {
   const code = result?.code || result?.debug?.responseFromPayerMax?.code;
   const rawMessage = result?.msg || result?.message || result?.debug?.responseFromPayerMax?.msg;
   if (!rawMessage || ['APPLY_SUCCESS', 'PAY_SUCCESS', 'SUCCESS'].includes(code)) return null;
 
   if (/amount/i.test(rawMessage)) {
-    return `${rawMessage} 当前支付方式或渠道可能不支持该首次绑定金额。可切换“首次 >0 元绑定”，或更换支付方式后再验证。`;
+    return `${rawMessage} ${t('subscription.error.unsupportedAmount')}`;
   }
 
   return rawMessage;

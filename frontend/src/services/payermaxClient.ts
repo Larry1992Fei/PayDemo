@@ -374,7 +374,7 @@ function buildOrderAndPayRequest(req: Record<string, any>) {
     totalAmount: finalAmount,
     currency: finalCurrency,
     ...(!omitCountry ? { country: req.country || 'ID' } : {}),
-    subject: req.subject || (subscriptionMode ? '订阅激活支付' : 'Demo Payment'),
+    subject: req.subject || (subscriptionMode ? 'Subscription Activation Payment' : 'Demo Payment'),
     userId: req.userId || createDemoUserId(),
     reference: req.reference || 'CustomRef',
     frontCallbackUrl: FRONT_CALLBACK_URL,
@@ -496,7 +496,7 @@ export async function postPayerMaxDemoApi(path: DemoApiPath, body: Record<string
     }
     return withDebug({
       code: payerMaxResponse.code === 'APPLY_SUCCESS' ? 'SUCCESS' : payerMaxResponse.code,
-      msg: payerMaxResponse.msg || '成功',
+      msg: payerMaxResponse.msg || 'Success',
       data: {
         subscriptionNo,
         subscriptionPlan: payerMaxResponse.data?.subscriptionPlan,

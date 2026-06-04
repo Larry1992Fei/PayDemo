@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useProduct } from '@/contexts/ProductContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { CheckCircle2, ShieldCheck, Loader2, ArrowRight, Wallet, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,7 @@ const CardIcon = () => (
 );
 
 export const StepComponentCashier: React.FC = () => {
+  const { t } = useLanguage();
   const { 
     amount, currency, paymentMethod, setPaymentMethod, setCurrentStep,
     sessionData, applySession, paymentToken, setPaymentToken, submitComponentOrder, isApiCalling
@@ -246,7 +248,7 @@ export const StepComponentCashier: React.FC = () => {
               {paymentToken}
             </div>
             <p className="mt-1 text-[10px] font-semibold text-slate-500">
-              获取到 Token 后用于后续下单。
+              {t('standard.component.tokenReadyHint')}
             </p>
           </div>
         )}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { ProductProvider, useProduct } from '@/contexts/ProductContext';
 import { SubscriptionProvider, useSubscription } from '@/contexts/SubscriptionContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Playzone } from '@/components/layout/Playzone';
@@ -76,11 +77,13 @@ function AppContent() {
 
 function App() {
   return (
-    <ProductProvider>
-      <SubscriptionProvider>
-        <AppContent />
-      </SubscriptionProvider>
-    </ProductProvider>
+    <LanguageProvider>
+      <ProductProvider>
+        <SubscriptionProvider>
+          <AppContent />
+        </SubscriptionProvider>
+      </ProductProvider>
+    </LanguageProvider>
   );
 }
 

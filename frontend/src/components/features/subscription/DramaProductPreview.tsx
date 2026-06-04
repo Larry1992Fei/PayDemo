@@ -3,6 +3,7 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { normalizeApmSubscriptionParams, normalizeFullCashierSubscriptionParams } from '@/types/subscription';
 import { Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * 订阅代扣专用的短剧行业订阅页 - 策略增强版
@@ -10,6 +11,7 @@ import { cn } from '@/lib/utils';
  */
 export const DramaProductPreview: React.FC = () => {
   const { subscriptionType, setSubscriptionType, integrationMode, paymentMethod, formParams, updateFormParam, goNext } = useSubscription();
+  const { t } = useLanguage();
   const dramaCoverUrl = `${import.meta.env.BASE_URL}drama_cover.png`;
 
   const isTrial = subscriptionType === 'trial';
@@ -19,6 +21,21 @@ export const DramaProductPreview: React.FC = () => {
   const shouldUseComponentKrwPlan = integrationMode === 'component';
   const shouldUseApmKrwPlan = paymentMethod === 'apm';
   const basePrice = shouldUseComponentKrwPlan ? '2000' : shouldUseApmKrwPlan ? '1000' : '29.99';
+  const trialDesc = t('subscription.drama.trialDesc')
+    .replace('{currency}', formParams.currency)
+    .replace('{amount}', basePrice);
+  const discountDesc = t('subscription.drama.discountDesc')
+    .replace('{count}', formParams.trialPeriodCount)
+    .replace('{currency}', formParams.currency)
+    .replace('{amount}', formParams.trialPeriodAmount);
+  const primaryText = isTrial
+    ? t('subscription.drama.startTrial').replace('{days}', formParams.trialDays)
+    : t('subscription.drama.subscribe');
+  const secondaryText = isTrial
+    ? t('subscription.drama.cancelAnytime')
+    : t('subscription.drama.onlyStart')
+      .replace('{currency}', formParams.currency)
+      .replace('{amount}', isDiscount ? formParams.trialPeriodAmount : basePrice);
 
   // 1. 同步逻辑：订阅计划的 periodAmount 必须保留后续周期原价。
   // 试用/优惠只影响 trialConfig 或 trialPeriodConfig，不能把 periodAmount 改成 0。
@@ -53,7 +70,7 @@ export const DramaProductPreview: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
         <div className="absolute bottom-3 left-5 right-5">
           <h1 className="text-[19px] font-black tracking-tight italic text-white drop-shadow-xl">THE ULTIMATE REVENGE</h1>
-          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">Thriller • Romance • 100+ Eps</p>
+          <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">{t('subscription.drama.genre')}</p>
         </div>
       </div>
 
@@ -61,8 +78,8 @@ export const DramaProductPreview: React.FC = () => {
       <div className="flex-1 px-5 pt-3 pb-24 space-y-3 overflow-y-auto scrollbar-hide">
         
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Select Your Offer</h3>
-          <span className="text-[9px] font-bold text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded-full border border-indigo-400/20">Monthly Plan</span>
+          <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">{t('subscription.drama.selectOffer')}</h3>
+          <span className="text-[9px] font-bold text-indigo-400 bg-indigo-400/10 px-2 py-0.5 rounded-full border border-indigo-400/20">{t('subscription.drama.monthlyPlan')}</span>
         </div>
 
         <div className="space-y-2">
@@ -81,10 +98,10 @@ export const DramaProductPreview: React.FC = () => {
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-center">
-                <p className={cn("text-[12px] font-black tracking-tight", isTrial ? "text-amber-500" : "text-slate-100")}>7-Day Free Access</p>
-                <div className="bg-amber-500/20 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Trial</div>
+                <p className={cn("text-[12px] font-black tracking-tight", isTrial ? "text-amber-500" : "text-slate-100")}>{t('subscription.drama.trialTitle')}</p>
+                <div className="bg-amber-500/20 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">{t('subscription.drama.trialBadge')}</div>
               </div>
-              <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">试用期间 0 元扣费。结束后按每月 {formParams.currency} {basePrice} 自动续费。</p>
+              <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">{trialDesc}</p>
             </div>
           </button>
 
@@ -103,12 +120,10 @@ export const DramaProductPreview: React.FC = () => {
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-center">
-                <p className={cn("text-[12px] font-black tracking-tight", isDiscount ? "text-indigo-400" : "text-slate-100")}>Introductory Offer</p>
-                <div className="bg-indigo-600/20 text-indigo-400 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Save 33%</div>
+                <p className={cn("text-[12px] font-black tracking-tight", isDiscount ? "text-indigo-400" : "text-slate-100")}>{t('subscription.drama.discountTitle')}</p>
+                <div className="bg-indigo-600/20 text-indigo-400 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">{t('subscription.drama.discountBadge')}</div>
               </div>
-              <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">
-                前 <span className="text-white font-bold">{formParams.trialPeriodCount}</span> 个月仅需 <span className="text-white font-extrabold">{formParams.currency} {formParams.trialPeriodAmount}</span>，后续恢复原价。
-              </p>
+              <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">{discountDesc}</p>
             </div>
           </button>
 
@@ -127,10 +142,10 @@ export const DramaProductPreview: React.FC = () => {
             </div>
             <div className="flex-1">
               <div className="flex justify-between items-center">
-                <p className={cn("text-[12px] font-black tracking-tight", isCombo ? "text-fuchsia-400" : "text-slate-100")}>Double Combo Strategy</p>
-                <div className="bg-fuchsia-600/20 text-fuchsia-400 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Best Value</div>
+                <p className={cn("text-[12px] font-black tracking-tight", isCombo ? "text-fuchsia-400" : "text-slate-100")}>{t('subscription.drama.comboTitle')}</p>
+                <div className="bg-fuchsia-600/20 text-fuchsia-400 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">{t('subscription.drama.comboBadge')}</div>
               </div>
-              <p className="text-[9px] text-slate-400 mt-0.5">7天试用 + 前3个月特惠，全方位营销方案体验。</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">{t('subscription.drama.comboDesc')}</p>
             </div>
           </button>
         </div>
@@ -150,10 +165,10 @@ export const DramaProductPreview: React.FC = () => {
         >
           <div className="flex items-center gap-2">
             <Play className="w-4 h-4 fill-white" />
-            <span>{isTrial ? `START ${formParams.trialDays}-DAY FREE TRIAL` : 'SUBSCRIBE & UNLOCK ALL'}</span>
+            <span>{primaryText}</span>
           </div>
           <p className="text-[9px] text-white/70 font-bold tracking-widest leading-none">
-             {isTrial ? 'Cancel Anytime' : `Only ${formParams.currency} ${isDiscount ? formParams.trialPeriodAmount : basePrice} to start`}
+             {secondaryText}
           </p>
         </button>
       </div>

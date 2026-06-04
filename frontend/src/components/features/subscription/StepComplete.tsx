@@ -2,13 +2,7 @@
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { normalizeApmSubscriptionParams, normalizeFullCashierSubscriptionParams } from '@/types/subscription';
 import { AlertCircle, CheckCircle2, Clock3, RotateCcw } from 'lucide-react';
-
-const periodUnitText: Record<string, string> = {
-  D: '日',
-  W: '周',
-  M: '月',
-  Y: '年',
-};
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const firstPresent = (...values: unknown[]) =>
   values.find(value => value !== undefined && value !== null && value !== '');
@@ -22,6 +16,7 @@ const formatAmount = (currency: unknown, amount: unknown) => {
 
 export const StepComplete: React.FC = () => {
   const { subMode, formParams, subscriptionType, paymentMethod, lastApiResponse, reset } = useSubscription();
+  const { t } = useLanguage();
   const planParams = paymentMethod === 'apm'
     ? normalizeApmSubscriptionParams(formParams)
     : normalizeFullCashierSubscriptionParams(formParams);
@@ -40,7 +35,7 @@ export const StepComplete: React.FC = () => {
   const activationCallback = lastApiResponse?.localActivationCallback || {};
   const orderAndPayStatus = activationCallback.orderAndPayStatus || activationCallback.payStatus || activationCallback.status || firstPaymentStatus;
   const requestPaymentMethod = requestData?.paymentDetail?.paymentMethodType || requestData?.paymentDetail?.paymentType;
-  const paymentMethodText = String(firstPresent(requestPaymentMethod, paymentMethod || '全量收银台')).toUpperCase();
+  const paymentMethodText = String(firstPresent(requestPaymentMethod, paymentMethod || t('subscription.complete.fullCashier'))).toUpperCase();
 
   const displayCurrency = firstPresent(
     activationCallback.currency,
@@ -74,25 +69,34 @@ export const StepComplete: React.FC = () => {
   const periodCount = firstPresent(planParams.periodCount, periodRule.periodCount);
   const periodUnit = String(firstPresent(planParams.periodUnit, periodRule.periodUnit));
   const totalPeriods = firstPresent(planParams.totalPeriods, queryPlan?.totalPeriods);
-  const periodText = `每 ${periodCount} ${periodUnitText[periodUnit] || periodUnit} · 共 ${totalPeriods} 期`;
+  const periodText = t('subscription.complete.periodText')
+    .replace('{count}', String(periodCount))
+    .replace('{unit}', t(`subscription.complete.unit.${periodUnit}`))
+    .replace('{total}', String(totalPeriods));
   const hasTrial = subscriptionType === 'trial' || subscriptionType === 'trial_discount';
   const hasDiscount = subscriptionType === 'discount' || subscriptionType === 'trial_discount';
 
   const planTitle = {
-    standard: '普通订阅',
-    trial: `${planParams.trialDays} 天免费试用`,
-    discount: `前 ${planParams.trialPeriodCount} 期优惠`,
-    trial_discount: `${planParams.trialDays} 天试用 + 前 ${planParams.trialPeriodCountCombo} 期优惠`,
+    standard: t('subscription.complete.plan.standard'),
+    trial: t('subscription.complete.plan.trial').replace('{days}', String(planParams.trialDays)),
+    discount: t('subscription.complete.plan.discount').replace('{count}', String(planParams.trialPeriodCount)),
+    trial_discount: t('subscription.complete.plan.trialDiscount')
+      .replace('{days}', String(planParams.trialDays))
+      .replace('{count}', String(planParams.trialPeriodCountCombo)),
   }[subscriptionType];
 
   const planRuleText = [
     hasTrial
-      ? `试用期 ${firstPresent(planParams.trialDays, trialConfig.trialDays)} 天，激活金额 ${formatAmount(displayCurrency, subscriptionType === 'trial_discount' ? comboTrialValue : trialValue)}`
+      ? t('subscription.complete.rule.trial')
+        .replace('{days}', String(firstPresent(planParams.trialDays, trialConfig.trialDays)))
+        .replace('{amount}', formatAmount(displayCurrency, subscriptionType === 'trial_discount' ? comboTrialValue : trialValue))
       : null,
     hasDiscount
-      ? `优惠期 ${firstPresent(subscriptionType === 'trial_discount' ? planParams.trialPeriodCountCombo : planParams.trialPeriodCount, trialPeriodConfig.trialPeriodCount)} 期，每期 ${formatAmount(periodCurrency, subscriptionType === 'trial_discount' ? comboTrialPeriodValue : trialPeriodValue)}`
+      ? t('subscription.complete.rule.discount')
+        .replace('{count}', String(firstPresent(subscriptionType === 'trial_discount' ? planParams.trialPeriodCountCombo : planParams.trialPeriodCount, trialPeriodConfig.trialPeriodCount)))
+        .replace('{amount}', formatAmount(periodCurrency, subscriptionType === 'trial_discount' ? comboTrialPeriodValue : trialPeriodValue))
       : null,
-    `后续每期 ${formatAmount(periodCurrency, periodValue)}`,
+    t('subscription.complete.rule.later').replace('{amount}', formatAmount(periodCurrency, periodValue)),
   ].filter(Boolean).join('；');
 
   const normalizedStatus = String(subscriptionStatus).toUpperCase();
@@ -109,12 +113,12 @@ export const StepComplete: React.FC = () => {
     : isFailed
       ? <AlertCircle className="h-10 w-10" />
       : <Clock3 className="h-10 w-10" />;
-  const headerTitle = isActive ? '订阅激活成功' : isFailed ? '订阅激活失败' : '订阅状态待确认';
+  const headerTitle = isActive ? t('subscription.complete.title.active') : isFailed ? t('subscription.complete.title.failed') : t('subscription.complete.title.pending');
   const headerDescription = isActive
-    ? '订阅计划已创建并完成首次激活，后续扣款由约定周期驱动。'
+    ? t('subscription.complete.desc.active')
     : isFailed
-      ? `subscriptionQuery 返回状态为 ${subscriptionStatus}，请根据查询结果排查首期授权/支付。`
-      : `subscriptionQuery 返回状态为 ${subscriptionStatus}，请等待异步结果或重新查询。`;
+      ? t('subscription.complete.desc.failed').replace('{status}', String(subscriptionStatus))
+      : t('subscription.complete.desc.pending').replace('{status}', String(subscriptionStatus));
 
   return (
     <div className="space-y-6 py-4 text-center">
@@ -130,12 +134,12 @@ export const StepComplete: React.FC = () => {
         <>
           <div className="grid grid-cols-2 gap-3 text-left">
             {[
-              { label: '订阅方案', value: planTitle },
-              { label: '扣款周期', value: periodText },
-              { label: '订阅规则', value: planRuleText },
-              { label: '激活请求', value: `${formatAmount(displayCurrency, activationValue)} · ${orderAndPayStatus}` },
-              { label: '查询状态', value: subscriptionStatus },
-              { label: '支付方式', value: paymentMethodText },
+              { label: t('subscription.complete.planLabel'), value: planTitle },
+              { label: t('subscription.complete.periodLabel'), value: periodText },
+              { label: t('subscription.complete.ruleLabel'), value: planRuleText },
+              { label: t('subscription.complete.activationLabel'), value: `${formatAmount(displayCurrency, activationValue)} · ${orderAndPayStatus}` },
+              { label: t('subscription.complete.queryLabel'), value: subscriptionStatus },
+              { label: t('subscription.complete.methodLabel'), value: paymentMethodText },
             ].map(item => (
               <div key={item.label} className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
                 <div className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">{item.label}</div>
@@ -150,7 +154,7 @@ export const StepComplete: React.FC = () => {
             className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white text-xs font-black text-emerald-700 shadow-sm transition-all active:scale-95"
           >
             <RotateCcw className="h-4 w-4" />
-            重置订阅流程
+            {t('subscription.complete.reset')}
           </button>
         </>
       )}

@@ -1,11 +1,13 @@
 import React from 'react';
 import { useProduct } from '@/contexts/ProductContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ShieldCheck, Lock, Cpu, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import { isCallbackUrl } from '@/lib/callbackReturn';
 import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 export const StepComponentPayment: React.FC = () => {
   const { submitComponentOrder, toNextStep, isApiCalling, lastApiResponse, redirectUrl, paymentMethod } = useProduct();
+  const { t } = useLanguage();
   const [hasSubmitted, setHasSubmitted] = React.useState(false);
   const [returnSignal, setReturnSignal] = React.useState<null | 'callback' | 'fallback'>(null);
   const iframeLoadCountRef = React.useRef(0);
@@ -93,7 +95,7 @@ export const StepComponentPayment: React.FC = () => {
             onClick={() => markReturn('fallback')}
             className="w-full h-11 rounded-xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
           >
-            完成页面支付，查看支付结果
+            {t('standard.component.paymentComplete')}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -137,18 +139,18 @@ export const StepComponentPayment: React.FC = () => {
           </div>
 
           <h2 className="text-[17px] font-black text-slate-900 mb-2 tracking-tight">
-            {displaySubmitted ? 'orderAndPay 已返回' : '准备调用 orderAndPay'}
+            {displaySubmitted ? t('result.orderReturned') : t('standard.component.readyOrder')}
           </h2>
 
           <div className="space-y-3 w-full">
             <p className="text-[11px] text-slate-500 font-medium leading-relaxed max-w-[250px] mx-auto">
-              将第二步获取到的 paymentToken 和 sessionKey 用于前端 JS 直连 PayerMax orderAndPay 完成下单支付。
+              {t('standard.component.useToken')}
             </p>
 
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/50 text-left space-y-2 w-full">
-              <Info label="支付方式" value={paymentMethod.toUpperCase()} />
-              <Info label="接口" value="/api/orderAndPay" />
-              <Info label="返回状态" value={status || (displaySubmitted ? 'PENDING' : 'WAITING')} />
+              <Info label={t('result.paymentMethod')} value={paymentMethod.toUpperCase()} />
+              <Info label={t('result.api')} value="/api/orderAndPay" />
+              <Info label={t('result.status')} value={status || (displaySubmitted ? 'PENDING' : 'WAITING')} />
             </div>
           </div>
         </div>
@@ -159,7 +161,7 @@ export const StepComponentPayment: React.FC = () => {
               onClick={() => toNextStep()}
               className="w-full h-11 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-600/20"
             >
-              查看支付结果
+              {t('result.check')}
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
@@ -169,7 +171,7 @@ export const StepComponentPayment: React.FC = () => {
               className="w-full h-11 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60 shadow-lg shadow-indigo-600/20"
             >
               {isApiCalling ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-              调用 orderAndPay
+              {t('standard.component.callOrder')}
             </button>
           )}
         </div>

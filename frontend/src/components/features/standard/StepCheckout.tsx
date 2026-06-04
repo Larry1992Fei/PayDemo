@@ -1,5 +1,6 @@
 import React from 'react';
 import { useProduct } from '@/contexts/ProductContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Loader2, ArrowRight, CheckCircle2, Clock3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isCallbackUrl } from '@/lib/callbackReturn';
@@ -7,6 +8,7 @@ import { MockReturnPage } from '@/components/shared/MockReturnPage';
 
 export const StepCheckout: React.FC = () => {
   const { redirectUrl, cashierMode, integrationMode, paymentMethod, lastApiResponse, toNextStep } = useProduct();
+  const { t } = useLanguage();
   const [returnSignal, setReturnSignal] = React.useState<null | 'callback' | 'postMessage' | 'fallback'>(null);
   const iframeLoadCountRef = React.useRef(0);
   const returnHandledRef = React.useRef(false);
@@ -118,7 +120,7 @@ export const StepCheckout: React.FC = () => {
               }}
               className="w-full h-11 rounded-xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform"
             >
-              {isApiMode ? '完成3DS验证，返回下单结果' : '完成页面支付，查看支付结果'}
+              {isApiMode ? t('standard.checkout.3dsComplete') : t('standard.checkout.paymentComplete')}
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -128,15 +130,15 @@ export const StepCheckout: React.FC = () => {
   }
 
   const title = isApiMode
-    ? (hasOrderResponse ? 'orderAndPay 已返回' : '正在请求 orderAndPay')
+    ? (hasOrderResponse ? t('result.orderReturned') : t('standard.checkout.requestingOrder'))
     : cashierMode === 'SPECIFIC'
-      ? '下单展示'
-      : '全量收银台';
+      ? t('standard.checkout.orderDisplay')
+      : t('standard.checkout.cashierPayment');
   const description = isApiMode
-    ? '前端 JS 已使用 Direct_Payment 调用 PayerMax。左侧展示本次 orderAndPay 的真实请求和响应。'
+    ? t('standard.checkout.requestSent')
     : cashierMode === 'SPECIFIC'
-      ? `正在处理 ${paymentMethod.toUpperCase()} 支付请求，请稍候。`
-      : 'PayerMax 会话正在初始化，将为用户提供多种支付方式选择。';
+      ? `${paymentMethod.toUpperCase()} ${t('standard.checkout.processingPayment')}`
+      : t('standard.checkout.cashierLoading');
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-6">
@@ -153,21 +155,23 @@ export const StepCheckout: React.FC = () => {
 
       <div>
         <h3 className="text-xl font-extrabold text-slate-800">{title}</h3>
-        <p className="text-xs font-medium text-slate-400 mt-2 px-4 leading-relaxed">{description}</p>
+        {description && (
+          <p className="text-xs font-medium text-slate-400 mt-2 px-4 leading-relaxed">{description}</p>
+        )}
       </div>
 
       {hasOrderResponse && (
         <div className="w-full rounded-2xl bg-slate-50 border border-slate-200 p-4 text-left space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">接口</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('result.api')}</span>
             <span className="text-xs font-black text-slate-800">/api/orderAndPay</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">支付方式</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('result.paymentMethod')}</span>
             <span className="text-xs font-black text-slate-800 uppercase">{paymentMethod}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">返回状态</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('result.status')}</span>
             <span className="text-xs font-black text-indigo-700">{status || 'PENDING'}</span>
           </div>
         </div>
@@ -179,7 +183,7 @@ export const StepCheckout: React.FC = () => {
           disabled={!hasOrderResponse}
           className="w-full h-12 rounded-2xl bg-indigo-600 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60 disabled:active:scale-100"
         >
-          {hasOrderResponse ? '查看支付结果' : '等待下单结果'}
+          {hasOrderResponse ? t('result.check') : t('standard.checkout.waitingResult')}
           {hasOrderResponse ? <ArrowRight className="w-4 h-4" /> : <Clock3 className="w-4 h-4" />}
         </button>
       </div>

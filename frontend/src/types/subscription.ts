@@ -90,9 +90,9 @@ export const DEFAULT_FORM_PARAMS: SubscriptionFormParams = {
   trialDays: '7', trialPeriodCount: '1', trialAmount: '0',
   trialPeriodAmount: '200', trialAmountCombo: '0',
   trialPeriodCountCombo: '1', trialPeriodAmountCombo: '200',
-  description: 'PMMAX周期首期扣款。',
+  description: 'PayerMax subscription first-period debit.',
   bindType: 'zero', merchantAmount: '2000', merchantCurrency: 'KRW',
-  merchantSubject: '代扣标题', merchantUserId: createDemoUserId(),
+  merchantSubject: 'Auto Debit Title', merchantUserId: createDemoUserId(),
   npAmount: '100', npCurrency: 'KRW',
 };
 
@@ -216,14 +216,14 @@ export function normalizeFullCashierSubscriptionParams(params: SubscriptionFormP
     totalPeriods: '12',
     periodCount: '1',
     periodUnit: 'M',
-    description: 'PMMAX周期首期扣款。',
+    description: 'PayerMax subscription first-period debit.',
   };
 }
 
 export function buildSubscriptionPlan(type: SubscriptionType, params: SubscriptionFormParams) {
   const plan: any = {
-    subject: params.description ? 'subject' : 'PayerMax订阅计划',
-    description: params.description || 'PMMAX周期首期扣款。',
+    subject: params.description ? 'subject' : 'PayerMax Subscription Plan',
+    description: params.description || 'PayerMax subscription first-period debit.',
     totalPeriods: parseInt(params.totalPeriods, 10),
     periodRule: {
       periodUnit: params.periodUnit,

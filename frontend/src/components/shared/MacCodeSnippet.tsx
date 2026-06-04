@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Check, Copy, Play } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export type CodeSection = {
   title: string;
@@ -34,8 +35,9 @@ export const MacCodeSnippet: React.FC<MacCodeSnippetProps> = ({
   className,
   onExecute,
   isExecuteDisabled,
-  emptyMessage = '完成本步骤操作后，将展示真实请求与响应。',
+  emptyMessage,
 }) => {
+  const { t } = useLanguage();
   const [isFlashing, setIsFlashing] = React.useState(false);
   const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
   const finalRequest = requestBody || codeString || '';
@@ -99,7 +101,7 @@ export const MacCodeSnippet: React.FC<MacCodeSnippetProps> = ({
               <div className="mx-auto mb-4 h-10 w-10 rounded-xl bg-slate-800/70 border border-white/10 flex items-center justify-center text-slate-500">
                 <Play className="w-4 h-4" />
               </div>
-              <p className="text-[13px] leading-6 text-slate-400 font-sans">{emptyMessage}</p>
+              <p className="text-[13px] leading-6 text-slate-400 font-sans">{emptyMessage || t('code.empty')}</p>
               <p className="mt-2 text-[10px] uppercase tracking-[0.24em] text-slate-600 font-bold">
                 Waiting for real exchange
               </p>
