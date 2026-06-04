@@ -374,6 +374,10 @@ export const StepComponent: React.FC = () => {
         return;
       }
 
+      if (subMode === 'payermax' && currentStep.id === 'pm-2') {
+        return;
+      }
+
       if (subMode !== 'payermax') {
         return;
       }
