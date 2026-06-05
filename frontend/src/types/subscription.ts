@@ -167,7 +167,7 @@ export function getMandateAmounts(
   
   // 币种逻辑：APM 或 全量收银台 强制 KRW
   const currency = (isApm || isFullCashier) ? 'KRW' : configuredCurrency;
-  const country = isApm ? 'KR' : 'ID';
+  const country = 'KR';
   
   // 金额逻辑：全量收银台且是 paid 类型时强制 2000，否则使用配置金额
   let firstBindAmount = params.bindType === 'zero' ? '0' : configuredAmount;
@@ -265,6 +265,45 @@ export function buildSubscriptionPlan(type: SubscriptionType, params: Subscripti
         amount: parseFloat(params.trialPeriodAmountCombo || '200'),
         currency: params.currency,
       },
+    };
+  }
+
+  return plan;
+}
+
+export function buildMerchantManagedSubscriptionPlan(
+  params: SubscriptionFormParams,
+  options: {
+    bindAmount: string | number;
+    laterAmount: string | number;
+    currency: string;
+  }
+) {
+  const bindAmount = Number(options.bindAmount || 0);
+  const laterAmount = Number(options.laterAmount || 0);
+  const currency = options.currency || params.merchantCurrency || 'KRW';
+  const plan: any = {
+    subject: 'subject',
+    description: 'PayerMax subscription first-period debit.',
+    totalPeriods: parseInt(params.totalPeriods || '12', 10),
+    periodRule: {
+      periodUnit: params.periodUnit || 'M',
+      periodCount: parseInt(params.periodCount || '1', 10),
+    },
+    periodAmount: {
+      amount: laterAmount,
+      currency,
+    },
+    firstPeriodStartDate: buildFirstPeriodStartDate(),
+  };
+
+  if (bindAmount === 0) {
+    plan.trialConfig = {
+      trialAmount: {
+        amount: 0,
+        currency,
+      },
+      trialDays: parseInt(params.trialDays || '7', 10),
     };
   }
 

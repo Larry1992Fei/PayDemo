@@ -55,9 +55,7 @@ const SubscriptionPlayzone: React.FC = () => {
   const payermaxDisplayParams = subMode === 'payermax'
     ? (paymentMethod === 'apm' ? normalizeApmSubscriptionParams(formParams) : normalizeFullCashierSubscriptionParams(formParams))
     : formParams;
-  const payermaxDisplayCountry = subMode === 'payermax'
-    ? 'KR'
-    : (paymentMethod === 'apm' ? 'KR' : 'ID');
+  const payermaxDisplayCountry = 'KR';
   const frontendParamSections: CodeSection[] | undefined = !currentExchange && currentStepIndex === 0
     ? [{
         title: 'Frontend Parameters',

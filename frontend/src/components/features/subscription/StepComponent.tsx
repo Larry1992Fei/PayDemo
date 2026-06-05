@@ -4,7 +4,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, Copy, Loader2, ShieldCheck, Wall
 import { cn } from '@/lib/utils';
 import { DEMO_MIT_MANAGEMENT_URL } from '@/config/payermaxDemoUrls';
 import type { PaymentMethod } from '@/types/subscription';
-import { calculateActivationAmount, getMandateAmounts, normalizeFullCashierSubscriptionParams } from '@/types/subscription';
+import { calculateActivationAmount, getMandateAmounts, normalizeFullCashierSubscriptionParams, buildMerchantManagedSubscriptionPlan } from '@/types/subscription';
 import { buildFirstPeriodStartDate, buildSubscriptionPlan } from '@/types/subscription';
 import { getErrorMessage, showUiError, showUiWarning } from '@/lib/uiFeedback';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -113,21 +113,18 @@ export const StepComponent: React.FC = () => {
       };
     }
 
-    return {
-      subscriptionPlan: {
-        subject: 'subject',
-        description: 'PayerMax subscription first-period debit.',
-        totalPeriods: Number(formParams.totalPeriods || 12),
-        periodRule: {
-          periodUnit: formParams.periodUnit || 'M',
-          periodCount: Number(formParams.periodCount || 1),
-        },
-        periodAmount: {
-          amount: Number(mandateAmounts.configuredLaterDebitAmount || mandateAmounts.laterDebitAmount || mandateAmounts.firstBindAmount || 0),
+    if (subMode === 'merchant') {
+      return {
+        subscriptionPlan: buildMerchantManagedSubscriptionPlan(formParams, {
+          bindAmount: mandateAmounts.firstBindAmount,
+          laterAmount: mandateAmounts.laterDebitAmount,
           currency: mandateAmounts.currency,
-        },
-        firstPeriodStartDate,
-      },
+        }),
+        mitManagementUrl: MIT_MANAGEMENT_URL,
+      };
+    }
+
+    return {
       mitManagementUrl: MIT_MANAGEMENT_URL,
     };
   };

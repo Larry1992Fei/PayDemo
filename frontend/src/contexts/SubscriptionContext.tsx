@@ -2,7 +2,7 @@
 import type {
   SubMode, IntegrationMode, PaymentMethod, SubscriptionType, SubscriptionFormParams, StepConfig
 } from '@/types/subscription';
-import { calculateActivationAmount, DEFAULT_FORM_PARAMS, getMandateAmounts, getSubscriptionNoFromResponse, isCompatible, normalizeApmSubscriptionParams, normalizeFullCashierSubscriptionParams, PAYMENT_METHOD_CONFIG } from '@/types/subscription';
+import { calculateActivationAmount, DEFAULT_FORM_PARAMS, getMandateAmounts, getSubscriptionNoFromResponse, isCompatible, normalizeApmSubscriptionParams, normalizeFullCashierSubscriptionParams, PAYMENT_METHOD_CONFIG, buildMerchantManagedSubscriptionPlan } from '@/types/subscription';
 import { getStepsForSubMode } from '@/config/subscriptionSteps';
 import { postPayerMaxDemoApi } from '@/services/payermaxClient';
 import { DEMO_MIT_MANAGEMENT_URL } from '@/config/payermaxDemoUrls';
@@ -772,6 +772,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         context.currency,
         context.country
       );
+      const merchantComponentSubscriptionPlan = subMode === 'merchant'
+        && integrationMode === 'component'
+        && (effectivePaymentMethod === 'applepay' || effectivePaymentMethod === 'googlepay')
+        ? buildMerchantManagedSubscriptionPlan(formParams, {
+          bindAmount: context.bindAmount,
+          laterAmount: context.deductAmount,
+          currency: context.currency,
+        })
+        : null;
       const requestBody = {
         mandateMode: true,
         mandateBusinessMode: subMode,
@@ -783,6 +792,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         ...(integrationMode === 'cashier' && !effectivePaymentMethod
           ? { subscriptionPlan: buildDefaultMandateSubscriptionPlan(), mitManagementUrl: MIT_MANAGEMENT_URL }
           : buildMitManagementUrl(effectivePaymentMethod)),
+        ...(merchantComponentSubscriptionPlan ? { subscriptionPlan: merchantComponentSubscriptionPlan } : {}),
         paymentDetail: {
           ...(buildPaymentDetail(effectivePaymentMethod) || {}),
           mitType: context.mitType,
@@ -955,7 +965,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         ...buildMitManagementUrl(paymentMethod),
         amount: calculateActivationAmount(subscriptionType, normalizeFullCashierSubscriptionParams(formParams)),
         currency: normalizeFullCashierSubscriptionParams(formParams).currency,
-        country: 'ID',
+        country: 'KR',
         userId: subscriptionUserId,
         subject: 'PayerMax Subscription Drop-in Activation',
         paymentToken: resolvedPaymentToken,
